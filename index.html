@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11.2">
+<meta name="tm-version" content="v11.3">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -719,6 +719,24 @@ html.phone body.p9 .fxhint{font-size:16px}
 #chatt112{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:55;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;width:min(88vw,360px)}
 #chatt112 .t{background:#fffffff0;color:#14315c;border-radius:14px;padding:5px 11px;font-size:14px;box-shadow:0 3px 12px #0006;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity .4s,transform .4s}
 #chatt112 .t.out{opacity:0;transform:translateY(-8px)}
+
+#rule113b{border:0;background:#ffffff22;color:#fff;border-radius:9px;padding:1px 6px;font-size:13px;line-height:1.3;cursor:pointer;pointer-events:auto}
+#rule113{position:fixed;inset:0;z-index:58;background:#0008;display:flex;align-items:center;justify-content:center}
+#rule113 .bx,#rv113 .bx{background:#14315c;color:#fff;border-radius:14px;width:min(94vw,420px);max-height:94vh;overflow:hidden;display:flex;flex-direction:column;padding:10px;gap:7px;box-sizing:border-box;box-shadow:0 8px 30px #0009}
+#rule113 .hd{display:flex;justify-content:space-between;align-items:center;font-weight:700}#rule113 .hd button{border:0;background:none;color:#fff;font-size:18px}
+#rule113 select{font-size:16px;border-radius:9px;padding:6px;border:0;width:100%}
+#rule113 .now{font-size:13px;opacity:.85}
+#rule113 .ops{display:flex;flex-wrap:wrap;gap:5px}#rule113 .ops button{border:0;border-radius:12px;padding:5px 9px;background:#ffffff22;color:#fff;font-size:13px}
+#rule113 .ops button.on{background:#ffc93c;color:#14315c;font-weight:700}#rule113 .ops button:disabled{opacity:.35}
+#rule113 .go,#rv113 .row button{border:0;border-radius:10px;padding:8px;font-weight:700;font-size:15px}
+#rule113 .go{background:#2e7d32;color:#fff}#rule113 .go:disabled{opacity:.4}
+#rule113 .er{font-size:12px;color:#ffb4b4}#rule113 .er:empty{display:none}
+@media (max-height:600px){#rule113 .bx{gap:5px;padding:8px}#rule113 .ops button{padding:4px 8px}#rule113 .go{padding:6px}}#rule113 .hint{font-size:12px;opacity:.75}
+#rv113{position:fixed;left:0;right:0;top:18%;z-index:57;display:flex;justify-content:center;pointer-events:none}
+#rv113 .bx{pointer-events:auto;border:2px solid #ffc93c}
+#rv113 .q{font-weight:700}#rv113 .lb{font-size:14px}#rv113 .sm{font-size:12px;opacity:.8}
+#rv113 .row{display:flex;gap:8px}#rv113 .row button{flex:1}#rv113 [data-r113=yes]{background:#2e7d32;color:#fff}#rv113 [data-r113=no]{background:#c62828;color:#fff}
+#rt113{position:fixed;left:50%;bottom:24%;transform:translateX(-50%);z-index:56;background:#fffffff2;color:#14315c;border-radius:14px;padding:7px 13px;font-size:14px;font-weight:700;box-shadow:0 3px 14px #0007;max-width:88vw;text-align:center;pointer-events:none;transition:opacity .4s}
 </style>
 </head>
 <body>
@@ -7656,7 +7674,9 @@ var Net9 = (function () {
       start: function () { raw({ t: "start" }); },
       sendAction: function (a) { raw({ t: "action", action: a }); },
       vote: function (choice) { raw({ t: "vote", choice: choice }); },
-      chat: function (text) { raw({ t: "chat", text: String(text || "").slice(0, 200) }); }, // v11.2: room chat (server relays, keeps the last 50)
+      chat: function (text) { raw({ t: "chat", text: String(text || "").slice(0, 200) }); },
+      propose: function (key, value) { raw({ t: "propose", key: key, value: value }); }, // v0.5.0: mid-game rule-change vote
+      pvote: function (id, choice) { raw({ t: "pvote", id: id, choice: choice }); }, // v11.2: room chat (server relays, keeps the last 50)
       recap: function (from) { raw({ t: "log", from: from || 0 }); },
       isOpen: function () { return !!ws && ws.readyState === 1; },
       me: function () { return me; }, forget: function () { me = null; var s = store(); if (s) try { s.removeItem(KEY); } catch (e) {} },
@@ -7739,7 +7759,7 @@ var Online11 = (function () {
     if (st.opts && st.opts.endsAt && st.phase !== "gameover") h += '<span class="tm11">⏱️ ' + mmss(st.opts.endsAt - now) + " left</span>";
     var host = (last.seats || []).filter(function (x) { return x.host; })[0];
     h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
-    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); placeBar();
+    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); if (window.Rules113) Rules113.mount(bar); placeBar();
     var v = last.vote, b = "";
     if (v && v.seat !== me) {
       var who = st.players[v.seat], mine = v.votes && v.votes[me];
@@ -7775,7 +7795,7 @@ var Online11 = (function () {
     UI.setOnline({ send: function (a) { net.sendAction(a); }, panel: panel });
     document.documentElement.classList.add("net11-on");
     net.on("state", function (m) { queue.push(m); pump(); });
-    net.on("recap", recap); if (window.Chat112) Chat112.start(net, function () { return me; });
+    net.on("recap", recap); if (window.Chat112) Chat112.start(net, function () { return me; }); if (window.Rules113) Rules113.start(net, function () { return me; }, function () { return last; });
     net.on("error", function (m) { if (m.action) toast(m.msg); });
     net.on("event", function (e) {
       if (!last) return; var nm = function (i) { return last.state.players[i] ? last.state.players[i].name : "?"; };
@@ -7800,7 +7820,7 @@ var Online11 = (function () {
   var PARK = [["classic", "Classic (nothing happens)"], ["jackpot", "Jackpot"], ["jackpot500", "Jackpot with $500 start"], ["fixed", "Fixed payout"], ["taxjackpot", "Taxes-only jackpot"], ["half", "Half pot"], ["double", "Double or nothing"], ["freerest", "Free rest (skip next rent)"], ["freemove", "Free move"], ["random", "Random bonus ($50 to $500)"]];
   var SPEED = [["classic", "Classic"], ["speedDie", "Speed die"], ["timed30", "Timed 30 min"], ["timed60", "Timed 60 min"], ["timed90", "Timed 90 min"]];
   var PRESET_KEY = "timTravelMonopoly.presets", ME_KEY = "timTravelMonopoly.onlineMe";
-  var DEF = { houseRules: { parking: { mode: "classic", amount: 200 }, speed: "classic", startingDeal: 0, doubleGo: false, auctionOnPass: true, noRentInJail: false, startingCash: 1500, autoMortgage: false }, disconnect: { mode: "vote", computerStyle: "regular", timerMin: 5 } };
+  var DEF = { houseRules: { parking: { mode: "classic", amount: 200 }, speed: "classic", startingDeal: 0, doubleGo: false, auctionOnPass: true, noRentInJail: false, startingCash: 1500, autoMortgage: false }, disconnect: { mode: "wait", computerStyle: "regular", timerMin: 5 } };
   var J = function (o) { return JSON.parse(JSON.stringify(o)); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
   function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
@@ -7866,7 +7886,7 @@ var Online11 = (function () {
     var h = s.houseRules, d = s.disconnect, pk = PARK.filter(function (p) { return p[0] === h.parking.mode; })[0][1] + (h.parking.mode === "fixed" ? " $" + h.parking.amount : "");
     return ["🛋️ " + pk, "⏱️ " + SPEED.filter(function (p) { return p[0] === h.speed; })[0][1], "💵 $" + h.startingCash + (h.startingDeal ? " · deal " + h.startingDeal + " each" : ""),
       [h.doubleGo && "Double GO", h.auctionOnPass ? "Auction on pass" : "No auction", h.noRentInJail && "No rent in jail"].filter(Boolean).join(" · "),
-      "📶 " + (d.mode === "vote" ? "Vote wait/computer" : "Auto computer") + " after " + d.timerMin + " min (" + d.computerStyle + ")"].map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+      "📶 " + (d.mode === "wait" ? "Pause and wait for them to come back" : (d.mode === "vote" ? "Vote wait/computer" : "Auto computer") + " after " + d.timerMin + " min (" + d.computerStyle + ")")].map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
   }
   function vLobby() {
     var r = S.room; if (!r) return '<p>Connecting…</p>' + waking();
@@ -7896,7 +7916,7 @@ var Online11 = (function () {
       '<div class="ln10"><span>Starting cash</span>' + seg("startingCash", [[1000, "$1000"], [1500, "$1500"], [2000, "$2000"]], h.startingCash, ro) + "</div>" +
       '<div class="cks10">' + chk("doubleGo", "Double on GO", h.doubleGo, ro) + chk("auctionOnPass", "Auction on pass", h.auctionOnPass, ro) + chk("noRentInJail", "No rent in jail", h.noRentInJail, ro) + "</div></div>" +
       '<div class="grp10"><h3>If someone disconnects</h3>' +
-      '<div class="ln10"><span>Then</span>' + seg("dmode", [["vote", "Vote: wait or computer"], ["auto", "Auto computer"]], d.mode, ro) + "</div>" +
+      '<div class="ln10"><span>Then</span>' + seg("dmode", [["wait", "Pause & wait"], ["vote", "Vote"], ["auto", "Computer"]], d.mode, ro) + "</div>" +
       '<div class="ln10"><span>Computer</span>' + seg("style", [["conservative", "Conservative"], ["regular", "Regular"]], d.computerStyle, ro) + "</div>" +
       '<div class="ln10"><span>After</span>' + seg("timer", [[2, "2 min"], [5, "5 min"], [10, "10 min"]], d.timerMin, ro) + "</div></div>" +
       (ro ? '<p class="hint10">Changes by the host show here live. Any change clears everyone\'s Agree.</p>' :
@@ -8203,6 +8223,68 @@ var Chat112 = (function () { // v11.2 online chat. All message text goes in via 
     n.on("chatlog", function (m) { msgs = (m.msgs || []).slice(-50); draw(); });
     n.on("error", function (m) { if (m.chat) warn(m.msg); }); }
   return { start: start, mount: mount, open: open, close: close, unread: function () { return unread; }, msgs: function () { return msgs; } };
+})();
+</script><script>
+var Rules113 = (function () { // v11.3 mid-game rule-change votes (server decides; this only proposes, votes and shows results)
+  var net = null, meFn = null, lastFn = null, btn = null, sheet = null, pop = null, voted = {}, sel = null, val, tickT = null;
+  var B = [[true, "On"], [false, "Off"]];
+  var RULES = [
+    ["parking", "Free Parking", [["classic", "Classic (nothing)"], ["jackpot", "Jackpot (fines)"], ["jackpot500", "Jackpot + $500"], ["fixed", "Fixed $200"], ["taxjackpot", "Taxes jackpot"], ["half", "Half the pot"], ["double", "Double pot"], ["freerest", "Free rest"], ["freemove", "Free move"], ["random", "Random"]], function (r) { return r.houseRules.parking.mode; }],
+    ["speedDie", "Speed die", B, function (r, st) { return !!st.opts.speedDie; }],
+    ["noRentInJail", "No rent while in jail", B, function (r) { return !!r.houseRules.noRentInJail; }],
+    ["auctionOnPass", "Auction when someone passes", B, function (r) { return !!r.houseRules.auctionOnPass; }],
+    ["doubleGo", "Double pay on GO", B, function (r) { return !!r.houseRules.doubleGo; }],
+    ["autoMortgage", "Auto-mortgage", B, function (r) { return !!r.houseRules.autoMortgage; }],
+    ["disconnectMode", "If someone disconnects", [["wait", "Pause and wait"], ["vote", "Vote after timer"], ["auto", "Computer after timer"]], function (r) { return r.disconnect.mode; }],
+    ["computerStyle", "Stand-in computer style", [["conservative", "Conservative"], ["regular", "Regular"]], function (r) { return r.disconnect.computerStyle; }],
+    ["timerMin", "Disconnect timer", [[2, "2 min"], [5, "5 min"], [10, "10 min"]], function (r) { return r.disconnect.timerMin; }]];
+  var SETUP = ["Starting cash", "Starting deal", "Game length (timed)"];
+  function el(t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; }
+  function L() { return lastFn && lastFn(); }
+  function cfg() { var l = L(); return l && l.state && l.state.online && l.state.online.settings; }
+  function mount(bar) { if (!net) return; if (!btn) { btn = el("button", "", "📜"); btn.id = "rule113b"; btn.type = "button"; btn.title = "Propose rule change"; btn.setAttribute("aria-label", "Propose rule change"); btn.addEventListener("click", function (e) { e.stopPropagation(); open(); }); }
+    var ch = document.getElementById("chat112b"); if (btn.parentNode !== bar) bar.insertBefore(btn, ch && ch.parentNode === bar ? ch : null);
+    var g = document.querySelector('#phoneMenu .pmsec[data-sec="game"]'); if (g && !g.querySelector("[data-r113=open]")) { var mb = el("button", "", "📜 Propose rule change"); mb.type = "button"; mb.dataset.r113 = "open"; g.appendChild(mb); }
+    vote(); }
+  function toast(t) { var e = document.getElementById("rt113"); if (!e) { e = el("div"); e.id = "rt113"; document.body.appendChild(e); } e.textContent = t; e.style.opacity = 1; e.style.display = "";
+    clearTimeout(toast.t); toast.t = setTimeout(function () { e.style.opacity = 0; setTimeout(function () { e.style.display = "none"; }, 450); }, 4000); }
+  function open() { var r = cfg(), l = L(); if (!r || !l) return; close(); if (window.P9 && P9.close) try { P9.close(); } catch (e) {}
+    var ps = document.getElementById("p9sheet"); if (ps && ps.classList.contains("open")) { var x = ps.querySelector("[data-p9close], .p9close"); if (x) x.click(); }
+    sheet = el("div"); sheet.id = "rule113"; var bx = el("div", "bx"); sheet.appendChild(bx);
+    var hd = el("div", "hd"); hd.appendChild(el("span", "", "📜 Propose rule change")); var xb = el("button", "", "✕"); xb.type = "button"; xb.dataset.r113 = "close"; hd.appendChild(xb); bx.appendChild(hd);
+    var se = el("select"); RULES.forEach(function (R, i) { var o = el("option", "", R[1]); o.value = i; se.appendChild(o); });
+    var og = el("optgroup"); og.label = "Set at the start only"; SETUP.forEach(function (t) { var o = el("option", "", t); o.disabled = true; og.appendChild(o); }); se.appendChild(og); bx.appendChild(se);
+    bx.appendChild(el("div", "now")); bx.appendChild(el("div", "ops"));
+    var go = el("button", "go", "Ask everyone"); go.type = "button"; go.dataset.r113 = "go"; bx.appendChild(go);
+    bx.appendChild(el("div", "er")); bx.appendChild(el("div", "hint", "60 s to vote (no answer = abstain) · majority wins · tie → host · starts next turn."));
+    se.addEventListener("change", function () { sel = +se.value; val = undefined; draw(); });
+    sheet.addEventListener("click", function (e) { e.stopPropagation(); var t = e.target, a = t.dataset.r113;
+      if (t === sheet || a === "close") close(); else if (t.dataset.o !== undefined) { val = JSON.parse(t.dataset.o); draw(); }
+      else if (a === "go" && val !== undefined) { net.propose(RULES[sel][0], val); sheet.querySelector(".er").textContent = "Sent…"; } });
+    document.body.appendChild(sheet); sel = 0; val = undefined; draw(); }
+  function draw() { if (!sheet) return; var r = cfg(), st = L().state, R = RULES[sel], cur = R[3](r, st), ops = sheet.querySelector(".ops"); ops.textContent = "";
+    sheet.querySelector(".now").textContent = "Now: " + R[2].filter(function (o) { return o[0] === cur; }).map(function (o) { return o[1]; })[0];
+    R[2].forEach(function (o) { var b = el("button", o[0] === val ? "on" : "", o[1]); b.type = "button"; b.dataset.o = JSON.stringify(o[0]); b.disabled = o[0] === cur; ops.appendChild(b); });
+    var busy = L().proposal; var go = sheet.querySelector(".go"); go.disabled = val === undefined || !!busy; if (busy) sheet.querySelector(".er").textContent = "A rule vote is already open."; }
+  function close() { if (sheet) sheet.remove(); sheet = null; }
+  function vote() { var l = L(), p = l && l.proposal, me = meFn(); clearInterval(tickT);
+    if (!p || p.votes[me] || voted[p.id] || p.voters.indexOf(me) < 0) { if (pop) { pop.remove(); pop = null; } return; }
+    if (!pop || pop.dataset.id != p.id) { if (pop) pop.remove(); pop = el("div"); pop.id = "rv113"; pop.dataset.id = p.id; var bx = el("div", "bx"); pop.appendChild(bx);
+      var who = l.state.players[p.seat]; bx.appendChild(el("div", "q", "📜 " + (who ? who.token + " " + who.name : "Someone") + " proposes a rule change"));
+      bx.appendChild(el("div", "lb", p.label)); var row = el("div", "row"); [["yes", "👍 Yes"], ["no", "👎 No"]].forEach(function (c) { var b = el("button", "", c[1]); b.type = "button"; b.dataset.r113 = c[0]; row.appendChild(b); }); bx.appendChild(row);
+      bx.appendChild(el("div", "sm")); pop.addEventListener("click", function (e) { var c = e.target.dataset.r113; if (c === "yes" || c === "no") { e.stopPropagation(); voted[p.id] = c; net.pvote(p.id, c); pop.remove(); pop = null; } });
+      document.body.appendChild(pop); }
+    var sm = pop.querySelector(".sm"), f = function () { var n = Object.keys(p.votes).length; sm.textContent = n + " of " + p.voters.length + " voted · " + Math.max(0, Math.ceil((p.endsAt - Date.now()) / 1000)) + " s left (no answer = abstain)"; };
+    f(); tickT = setInterval(f, 1000); }
+  document.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("[data-r113=open]"); if (b && net) { e.stopPropagation(); e.preventDefault(); open(); } }, true);
+  function start(n, me, last) { net = n; meFn = me; lastFn = last;
+    n.on("state", function () { setTimeout(function () { vote(); if (sheet) draw(); }, 0); });
+    n.on("event", function (e) {
+      if (e.kind === "proposalResult") { toast((e.passed ? "✅ Passed " : "❌ Rejected ") + e.yes + "–" + e.no + (e.tie ? " (host decides)" : "") + ": " + e.label + (e.passed ? ". Starts next turn." : "")); if (sheet) close(); }
+      else if (e.kind === "ruleChanged") toast("📜 Rule changed: " + e.label);
+      else if (e.kind === "proposal" && sheet) close(); });
+    n.on("error", function (m) { if (m.prop) { if (sheet) sheet.querySelector(".er").textContent = m.msg; else toast(m.msg); } }); }
+  return { start: start, mount: mount, open: open, close: close };
 })();
 </script></body>
 </html>
