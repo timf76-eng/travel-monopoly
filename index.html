@@ -7288,5 +7288,298 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
 })();
 
 </script>
+<style id="online-lobby-css">
+/* v10 online lobby overlay (phone-first, v9 palette: navy #14315c, gold #ffc93c, cream #fbf6ea) */
+html.ol10-on, html.ol10-on body { overflow: hidden }
+#ol10 { position: fixed; inset: 0; z-index: 9000; background: #efe6d2; color: #14315c; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden;
+  padding: max(10px, env(safe-area-inset-top)) 14px max(10px, env(safe-area-inset-bottom)); box-sizing: border-box }
+#ol10 * { box-sizing: border-box }
+#ol10 .in10 { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; gap: 9px }
+#ol10 button { font: inherit; color: inherit; cursor: pointer; border-radius: 12px; border: 2px solid #14315c; background: #fbf6ea; min-height: 44px; padding: 6px 10px; font-weight: 700 }
+#ol10 button:disabled { opacity: .45; cursor: default }
+#ol10 .big10 { width: 100%; font-size: 18px; padding: 10px 14px; text-align: left; display: flex; flex-direction: column; justify-content: center; align-items: flex-start }
+#ol10 .big10 small { font-weight: 500; font-size: 13px; opacity: .8 }
+#ol10 .pri { background: #14315c; color: #fff }
+#ol10 .go { background: #2e8b57; border-color: #2e8b57; color: #fff; align-items: center }
+#ol10 .lnk10 { border: 0; background: none; text-decoration: underline }
+#ol10 .hero10 { text-align: center; margin: 4vh 0 2vh } #ol10 .logo10 { font-size: 56px }
+#ol10 h1 { font-size: 26px; margin: 4px 0 } #ol10 .hero10 p { margin: 0; opacity: .75 }
+#ol10 .hdr10 { display: flex; align-items: center; gap: 10px } #ol10 .hdr10 h2 { margin: 0; font-size: 22px } #ol10 .hdr10 small { font-size: 13px; font-weight: 500 }
+#ol10 .hdr10 button { width: 44px; padding: 0 }
+#ol10 .f10 { display: flex; flex-direction: column; font-weight: 700; gap: 4px; font-size: 15px }
+#ol10 input, #ol10 select { font: inherit; font-size: 17px; border: 2px solid #14315c; border-radius: 10px; padding: 8px 10px; background: #fff; color: #14315c; min-height: 44px; min-width: 0 }
+#ol10 #code10 { font-size: 30px; letter-spacing: 10px; text-transform: uppercase; text-align: center; font-weight: 800 }
+#ol10 .t10 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px } #ol10 .t10 button { font-size: 24px; padding: 0; background: #fff; border-color: #d8ccb0 }
+#ol10 .t10 button.on { border-color: #14315c; background: #dbe8ff; box-shadow: 0 0 0 2px #14315c }
+#ol10 .err10 { color: #b3261e; margin: 0; font-weight: 600 } #ol10 .ok10 { color: #2e6b3f; margin: 0; font-weight: 600 }
+#ol10 .hint10 { margin: 0; font-size: 13px; opacity: .8; text-align: center }
+#ol10 .wake10 { background: #fff7d6; border: 2px solid #ffc93c; border-radius: 12px; padding: 8px 10px; font-weight: 700; text-align: center } #ol10 .wake10 small { font-weight: 500 }
+#ol10 .spin10 { display: inline-block; width: 16px; height: 16px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin10 .8s linear infinite; margin-right: 8px; vertical-align: -3px }
+@keyframes spin10 { to { transform: rotate(360deg) } }
+#ol10 .code10 { background: #14315c; color: #fff; border-radius: 16px; padding: 8px 12px; display: grid; grid-template-columns: 1fr auto; align-items: center }
+#ol10 .code10 small { grid-column: 1/3; opacity: .8 } #ol10 .code10 b { font-size: 46px; letter-spacing: 10px; line-height: 1.05; color: #ffc93c }
+#ol10 .code10 button { background: #ffc93c; border-color: #ffc93c; color: #14315c }
+#ol10 .pl10 { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px }
+#ol10 .pl10 li { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 6px; align-items: center; background: #fbf6ea; border-radius: 10px; padding: 5px 8px; font-size: 16px }
+#ol10 .pl10 li.off { opacity: .55 } #ol10 .pl10 .tk { font-size: 24px } #ol10 .pl10 .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+#ol10 .pl10 .st, #ol10 .pl10 .ag { font-size: 13px } #ol10 .pl10 li.hint { display: block; text-align: center; font-size: 14px; opacity: .7 }
+#ol10 .rs10 { background: #fbf6ea; border-radius: 12px; padding: 6px 10px; font-size: 14px; min-height: 0; overflow: hidden }
+#ol10 .rs10 ul { margin: 2px 0 0; padding-left: 4px; list-style: none } #ol10 .rs10 li { padding: 1px 0 }
+#ol10 .rsh { display: flex; justify-content: space-between; align-items: center } #ol10 .rsh button { min-height: 34px; padding: 2px 10px }
+#ol10 .row10 { display: flex; gap: 8px; margin-top: auto } #ol10 .row10 .big10 { align-items: center; text-align: center; font-size: 16px }
+#ol10 .grp10 { background: #fbf6ea; border-radius: 12px; padding: 6px 10px; display: flex; flex-direction: column; gap: 5px }
+#ol10 h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: .5px; opacity: .8 }
+#ol10 .ln10 { display: flex; align-items: center; gap: 6px } #ol10 .ln10 > span { width: 92px; flex: none; font-weight: 700; font-size: 14px }
+#ol10 .ln10 select, #ol10 .ln10 input { flex: 1; font-size: 15px; min-height: 38px; padding: 4px 8px } #ol10 .ln10 input[type=number] { flex: 0 0 80px }
+#ol10 .seg10 { display: flex; flex: 1; gap: 4px } #ol10 .seg10 button { flex: 1; min-height: 38px; padding: 2px 4px; font-size: 13px; border-color: #c9bb98 }
+#ol10 .seg10 button.on { background: #14315c; color: #fff; border-color: #14315c }
+#ol10 .cks10 { display: flex; flex-wrap: wrap; gap: 4px 12px } #ol10 .ck10 { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 600; min-height: 32px }
+#ol10 .ck10 input { min-height: 0; width: 20px; height: 20px }
+#ol10 .pre10 button { min-height: 38px; padding: 2px 10px; font-size: 14px }
+#ol10 .v-rules { gap: 7px } #ol10 .v-rules .big10 { margin-top: auto; align-items: center; min-height: 44px; padding: 6px }
+#ol10 .toast10 { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: #14315c; color: #fff; padding: 10px 16px; border-radius: 20px; font-weight: 600; max-width: 90vw; text-align: center; z-index: 9001 }
+
+</style>
+<script id="online-net">
+/* ===================== v9 online: tiny client for server/server.js (stage 1: not wired into the UI yet) =====================
+   var net = Net9.connect("wss://<render-host>");   // or ws://localhost:8787
+   net.createRoom({ name, token, theme, settings }) / net.joinRoom(code, name, token) / net.rejoin() / net.start()
+   net.sendAction({ type: "roll" }) ; net.onState(fn(msg)) ; net.on("event"|"room"|"joined"|"error"|"recap", fn)
+   The rejoin token is kept in localStorage ("timTravelMonopoly.online") so a reload or dropped signal restores the seat. */
+var Net9 = (function () {
+  var KEY = "timTravelMonopoly.online";
+  function store() { try { return typeof localStorage !== "undefined" ? localStorage : null; } catch (e) { return null; } }
+  function saved() { try { var s = store(); return s ? JSON.parse(s.getItem(KEY) || "null") : null; } catch (e) { return null; } }
+  function connect(url, opts) {
+    opts = opts || {};
+    var opened = false, WS = opts.WebSocket || (typeof WebSocket !== "undefined" ? WebSocket : null), ws = null, queue = [], subs = {}, me = saved(), closed = false, retry = 0;
+    function on(t, fn) { (subs[t] = subs[t] || []).push(fn); return api; }
+    function fire(t, m) { (subs[t] || []).forEach(function (f) { try { f(m); } catch (e) { if (typeof console !== "undefined") console.error(e); } }); }
+    function raw(m) { var s = JSON.stringify(m); if (ws && ws.readyState === 1) ws.send(s); else queue.push(s); }
+    function open() {
+      ws = new WS(url);
+      ws.onopen = function () { retry = 0; if (me && me.rt && (opened || opts.autoRejoin !== false) && !queue.some(function (q) { return /"t":"(rejoin|create|join)"/.test(q); })) raw({ t: "rejoin", code: me.code, rt: me.rt }); opened = true; while (queue.length) ws.send(queue.shift()); fire("open"); };
+      ws.onmessage = function (ev) {
+        var m; try { m = JSON.parse(typeof ev.data === "string" ? ev.data : String(ev.data)); } catch (e) { return; }
+        if (m.t === "left" || m.t === "closed") { api.forget(); }
+        if (m.t === "joined") { me = { code: m.code, rt: m.rt, seat: m.seat }; var s = store(); if (s) try { s.setItem(KEY, JSON.stringify(me)); } catch (e) {} }
+        fire(m.t, m);
+      };
+      ws.onclose = function () { fire("close"); if (!closed && opts.reconnect !== false) setTimeout(open, Math.min(10000, 500 * Math.pow(2, retry++))); };
+      ws.onerror = function () {};
+    }
+    var api = {
+      on: on, onState: function (fn) { return on("state", fn); },
+      createRoom: function (o) { raw({ t: "create", name: o.name, token: o.token, theme: o.theme || null, settings: o.settings || null }); },
+      joinRoom: function (code, name, token) { raw({ t: "join", code: String(code).toUpperCase(), name: name, token: token }); },
+      rejoin: function (code, rt) { if (code) me = { code: code, rt: rt }; if (me) raw({ t: "rejoin", code: me.code, rt: me.rt }); },
+      setSettings: function (s) { raw({ t: "settings", settings: s }); },
+      agree: function (yes) { raw({ t: "agree", agreed: yes !== false }); },
+      leave: function () { raw({ t: "leave" }); },
+      peek: function (code) { raw({ t: "peek", code: String(code).toUpperCase() }); },
+      start: function () { raw({ t: "start" }); },
+      sendAction: function (a) { raw({ t: "action", action: a }); },
+      vote: function (choice) { raw({ t: "vote", choice: choice }); },
+      recap: function (from) { raw({ t: "log", from: from || 0 }); },
+      me: function () { return me; }, forget: function () { me = null; var s = store(); if (s) try { s.removeItem(KEY); } catch (e) {} },
+      close: function () { closed = true; if (ws) ws.close(); },
+      drop: function () { if (ws) ws.close(); } // test helper: simulate lost signal (auto-reconnects unless reconnect:false)
+    };
+    open(); return api;
+  }
+  return { connect: connect, KEY: KEY };
+})();
+if (typeof module !== "undefined") module.exports = Net9;
+
+</script>
+<script id="online-lobby">
+/* ===================== v10 stage 2: Play online (home choice, create / join, lobby, rules + agree) =====================
+   Full-screen overlay on top of the v9 game; "Pass & play" just closes it. Talks to server/server.js through Net9.
+   Server: wss://travel-monopoly-server.onrender.com (override with ?server=ws://host:port). Deep link: ?room=CODE */
+(function () {
+  var Q = new URLSearchParams(location.search), SERVER = Q.get("server") || "wss://travel-monopoly-server.onrender.com";
+  var TOKENS = ["✈️", "🧳", "🌍", "🚢", "🗺️", "📸", "🏝️", "🎒", "🚗", "🧭", "🕶️", "🏔️"];
+  var PARK = [["classic", "Classic (nothing happens)"], ["jackpot", "Jackpot"], ["jackpot500", "Jackpot with $500 start"], ["fixed", "Fixed payout"], ["taxjackpot", "Taxes-only jackpot"], ["half", "Half pot"], ["double", "Double or nothing"], ["freerest", "Free rest (skip next rent)"], ["freemove", "Free move"], ["random", "Random bonus ($50 to $500)"]];
+  var SPEED = [["classic", "Classic"], ["speedDie", "Speed die"], ["timed30", "Timed 30 min"], ["timed60", "Timed 60 min"], ["timed90", "Timed 90 min"]];
+  var PRESET_KEY = "timTravelMonopoly.presets", ME_KEY = "timTravelMonopoly.onlineMe";
+  var DEF = { houseRules: { parking: { mode: "classic", amount: 200 }, speed: "classic", startingDeal: 0, doubleGo: false, auctionOnPass: true, noRentInJail: false, startingCash: 1500, autoMortgage: false }, disconnect: { mode: "vote", computerStyle: "regular", timerMin: 5 } };
+  var J = function (o) { return JSON.parse(JSON.stringify(o)); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+  var prof = ls(ME_KEY) || { name: "", token: "" };
+  var S = { view: Q.get("room") ? "join" : "home", code: (Q.get("room") || "").toUpperCase().slice(0, 4), room: null, you: 0, err: "", open: false, waking: false, peek: null, state: null, toast: "" };
+  var net = null, wakeT = null;
+
+  var el = document.createElement("div"); el.id = "ol10"; document.body.appendChild(el);
+  document.documentElement.classList.add("ol10-on");
+
+  function connect() {
+    if (net) return net;
+    net = Net9.connect(SERVER, { autoRejoin: false });
+    S.open = false; wakeT = setTimeout(function () { if (!S.open) { S.waking = true; draw(); } }, 1500);
+    net.on("open", function () { S.open = true; S.waking = false; clearTimeout(wakeT); if (S.view === "join" && S.code.length === 4) net.peek(S.code); draw(); });
+    net.on("close", function () { S.open = false; if (S.view === "lobby" || S.view === "rules" || S.view === "game") { S.waking = true; draw(); } });
+    net.on("error", function (m) { S.err = m.msg; S.busy = false; draw(); });
+    net.on("joined", function (m) { S.you = m.seat; S.code = m.code; S.busy = false; S.err = ""; if (S.view !== "rules") S.view = "lobby"; history.replaceState(null, "", location.pathname + "?room=" + m.code + (Q.get("server") ? "&server=" + encodeURIComponent(Q.get("server")) : "")); draw(); });
+    net.on("room", function (m) {
+      S.room = m; if (m.you !== undefined) S.you = m.you;
+      if (m.settingsChanged && S.you !== 0) flash("The host changed the rules: please check and Agree again");
+      if (m.phase === "playing" && S.view !== "game") S.view = "game";
+      draw();
+    });
+    net.on("peek", function (m) { S.peek = m; draw(); });
+    net.on("state", function (m) { S.state = m; if (m.you !== undefined) S.you = m.you; if (m.seats && S.room) S.room.seats = m.seats; S.view = "game"; draw(); });
+    net.on("closed", function (m) { S.room = null; S.view = "home"; S.err = m.msg; draw(); });
+    net.on("left", function () { S.room = null; S.view = "home"; draw(); });
+    return net;
+  }
+  function flash(t) { S.toast = t; draw(); setTimeout(function () { if (S.toast === t) { S.toast = ""; draw(); } }, 3500); }
+  function amHost() { return S.you === 0; }
+  function settings() { return S.room ? S.room.settings : J(DEF); }
+
+  /* ---------- views ---------- */
+  function tokenPicker(taken) {
+    return '<div class="t10">' + TOKENS.map(function (t) { var x = taken.indexOf(t) >= 0; return '<button data-a="tok" data-v="' + t + '"' + (x ? " disabled" : "") + (prof.token === t ? ' class="on"' : "") + ">" + t + "</button>"; }).join("") + "</div>";
+  }
+  function waking() { return S.waking ? '<div class="wake10"><span class="spin10"></span>Waking up the server, ~30-60s…<br><small>It sleeps when nobody is playing. Retrying automatically.</small></div>' : ""; }
+  function vHome() {
+    var me = Net9 && ls(Net9.KEY);
+    return '<div class="hero10"><div class="logo10">🇬🇷</div><h1>Tim\'s Travel Monopoly</h1><p>Greece edition</p></div>' +
+      '<button class="big10 pri" data-a="local">📱 Pass &amp; play<small>One phone, take turns</small></button>' +
+      '<button class="big10" data-a="goCreate">🌐 Play online: create room<small>You host; friends join with a code</small></button>' +
+      '<button class="big10" data-a="goJoin">🔑 Play online: join room<small>Enter the 4-letter code</small></button>' +
+      (me && me.code ? '<button class="lnk10" data-a="rejoin">↩️ Rejoin room ' + esc(me.code) + "</button>" : "");
+  }
+  function vForm(join) {
+    var taken = join && S.peek && !S.peek.missing ? S.peek.seats.map(function (x) { return x.token; }) : [];
+    var ok = prof.name.trim() && prof.token && taken.indexOf(prof.token) < 0 && (!join || S.code.length === 4);
+    return '<div class="hdr10"><button data-a="home">◀</button><h2>' + (join ? "Join a room" : "Create a room") + "</h2></div>" +
+      (join ? '<label class="f10">Room code<input id="code10" maxlength="4" autocapitalize="characters" autocomplete="off" value="' + esc(S.code) + '" placeholder="ABCD"></label>' +
+        (S.peek && S.peek.missing ? '<p class="err10">No room ' + esc(S.peek.code) + " (check the code)</p>" : S.peek && S.peek.seats ? '<p class="ok10">Room ' + esc(S.peek.code) + ": " + S.peek.seats.map(function (x) { return x.token + " " + esc(x.name); }).join(", ") + "</p>" : "") : "") +
+      '<label class="f10">Your name<input id="name10" maxlength="20" value="' + esc(prof.name) + '" placeholder="Name"></label>' +
+      '<div class="f10">Pick your token</div>' + tokenPicker(taken) +
+      (!join && typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? '<p class="ok10">Your edited board &amp; cards will be used for this game.</p>' : "") +
+      waking() + (S.err ? '<p class="err10">' + esc(S.err) + "</p>" : "") +
+      '<button class="big10 pri" data-a="' + (join ? "join" : "create") + '"' + (ok && !S.busy ? "" : " disabled") + ">" + (S.busy ? '<span class="spin10"></span>' : "") + (join ? "Join room" : "Create room") + "</button>";
+  }
+  function summary(s) {
+    var h = s.houseRules, d = s.disconnect, pk = PARK.filter(function (p) { return p[0] === h.parking.mode; })[0][1] + (h.parking.mode === "fixed" ? " $" + h.parking.amount : "");
+    return ["🛋️ " + pk, "⏱️ " + SPEED.filter(function (p) { return p[0] === h.speed; })[0][1], "💵 $" + h.startingCash + (h.startingDeal ? " · deal " + h.startingDeal + " each" : ""),
+      [h.doubleGo && "Double GO", h.auctionOnPass ? "Auction on pass" : "No auction", h.noRentInJail && "No rent in jail"].filter(Boolean).join(" · "),
+      "📶 " + (d.mode === "vote" ? "Vote wait/computer" : "Auto computer") + " after " + d.timerMin + " min (" + d.computerStyle + ")"].map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+  }
+  function vLobby() {
+    var r = S.room; if (!r) return '<p>Connecting…</p>' + waking();
+    var all = r.seats.length >= 2 && r.seats.every(function (x) { return x.agreed; }), me = r.seats[S.you] || {};
+    return '<div class="hdr10"><button data-a="leave">◀</button><h2>Lobby</h2></div>' +
+      '<div class="code10"><small>Room code</small><b id="roomcode">' + esc(r.code) + '</b><button data-a="share">📤 Share link</button></div>' +
+      '<ul class="pl10">' + r.seats.map(function (x, i) {
+        return '<li class="' + (x.connected ? "on" : "off") + '"><span class="tk">' + x.token + "</span><span class=\"nm\">" + esc(x.name) + (x.host ? " 👑" : "") + (i === S.you ? " (you)" : "") +
+          '</span><span class="st">' + (x.connected ? "🟢" : "⚪ away") + "</span><span class=\"ag\">" + (x.agreed ? "✅ Agreed" : "⏳") + "</span></li>";
+      }).join("") + (r.seats.length < 2 ? '<li class="hint">Waiting for at least one more player…</li>' : "") + "</ul>" +
+      '<div class="rs10"><div class="rsh"><b>House rules</b><button data-a="rules">' + (amHost() ? "✏️ Edit" : "👀 View") + '</button></div><ul>' + summary(r.settings) + "</ul></div>" +
+      waking() + (S.err ? '<p class="err10">' + esc(S.err) + "</p>" : "") +
+      '<div class="row10"><button class="big10 ' + (me.agreed ? "" : "pri") + '" data-a="agree">' + (me.agreed ? "✅ Agreed (tap to undo)" : "👍 Agree to rules") + "</button>" +
+      (amHost() ? '<button class="big10 go" data-a="start"' + (all ? "" : " disabled") + ">🚀 Start</button>" : "") + "</div>" +
+      (amHost() && !all ? '<p class="hint10">Start unlocks when everyone (2+ players) has agreed.</p>' : !amHost() ? '<p class="hint10">The host starts the game once everyone agrees.</p>' : "");
+  }
+  function seg(key, opts, val, ro) { return '<div class="seg10">' + opts.map(function (o) { return '<button data-a="set" data-k="' + key + '" data-v="' + o[0] + '"' + (String(val) === String(o[0]) ? ' class="on"' : "") + (ro ? " disabled" : "") + ">" + o[1] + "</button>"; }).join("") + "</div>"; }
+  function chk(key, label, val, ro) { return '<label class="ck10"><input type="checkbox" data-a="set" data-k="' + key + '"' + (val ? " checked" : "") + (ro ? " disabled" : "") + ">" + label + "</label>"; }
+  function vRules() {
+    var s = settings(), h = s.houseRules, d = s.disconnect, ro = !amHost(), pres = ls(PRESET_KEY) || {};
+    return '<div class="hdr10"><button data-a="lobby">◀</button><h2>Rules' + (ro ? " <small>(host decides)</small>" : "") + "</h2></div>" +
+      '<div class="grp10"><h3>House rules</h3>' +
+      '<div class="ln10"><span>Free Parking</span><select data-a="set" data-k="parking"' + (ro ? " disabled" : "") + ">" + PARK.map(function (p) { return '<option value="' + p[0] + '"' + (h.parking.mode === p[0] ? " selected" : "") + ">" + p[1] + "</option>"; }).join("") + "</select>" +
+      (h.parking.mode === "fixed" ? '<input type="number" min="0" max="5000" step="10" data-a="set" data-k="parkAmt" value="' + h.parking.amount + '"' + (ro ? " disabled" : "") + ">" : "") + "</div>" +
+      '<div class="ln10"><span>Speed</span><select data-a="set" data-k="speed"' + (ro ? " disabled" : "") + ">" + SPEED.map(function (p) { return '<option value="' + p[0] + '"' + (h.speed === p[0] ? " selected" : "") + ">" + p[1] + "</option>"; }).join("") + "</select></div>" +
+      '<div class="ln10"><span>Starting deal</span>' + seg("startingDeal", [[0, "None"], [2, "2 each"], [3, "3 each"]], h.startingDeal, ro) + "</div>" +
+      '<div class="ln10"><span>Starting cash</span>' + seg("startingCash", [[1000, "$1000"], [1500, "$1500"], [2000, "$2000"]], h.startingCash, ro) + "</div>" +
+      '<div class="cks10">' + chk("doubleGo", "Double on GO", h.doubleGo, ro) + chk("auctionOnPass", "Auction on pass", h.auctionOnPass, ro) + chk("noRentInJail", "No rent in jail", h.noRentInJail, ro) + "</div></div>" +
+      '<div class="grp10"><h3>If someone disconnects</h3>' +
+      '<div class="ln10"><span>Then</span>' + seg("dmode", [["vote", "Vote: wait or computer"], ["auto", "Auto computer"]], d.mode, ro) + "</div>" +
+      '<div class="ln10"><span>Computer</span>' + seg("style", [["conservative", "Conservative"], ["regular", "Regular"]], d.computerStyle, ro) + "</div>" +
+      '<div class="ln10"><span>After</span>' + seg("timer", [[2, "2 min"], [5, "5 min"], [10, "10 min"]], d.timerMin, ro) + "</div></div>" +
+      (ro ? '<p class="hint10">Changes by the host show here live. Any change clears everyone\'s Agree.</p>' :
+        '<div class="grp10 pre10"><h3>Presets</h3><div class="ln10"><select id="pre10"><option value="">Load a preset…</option>' + Object.keys(pres).map(function (k) { return '<option>' + esc(k) + "</option>"; }).join("") + '</select><button data-a="preDel">🗑️</button></div>' +
+        '<div class="ln10"><input id="preName" placeholder="Preset name, e.g. Family quick game" maxlength="30"><button data-a="preSave">💾 Save</button></div></div>') +
+      '<button class="big10 pri" data-a="lobby">Back to lobby</button>';
+  }
+  function vGame() {
+    var m = S.state, st = m && m.state;
+    return '<div class="hdr10"><h2>🎲 Game starting</h2></div><p class="hint10">Live play arrives in stage 3. Here\'s the table as the server sees it:</p>' +
+      (st ? '<ul class="pl10">' + st.players.map(function (p, i) { return '<li class="' + (m.seats[i] && m.seats[i].connected ? "on" : "off") + '"><span class="tk">' + p.token + '</span><span class="nm">' + esc(p.name) + (i === m.actor ? " 🎯" : "") + '</span><span class="st">$' + p.cash + "</span></li>"; }).join("") + "</ul>" +
+        '<div class="rs10"><ul>' + st.log.slice(-4).map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul></div>" : "<p>Waiting for the first state…</p>") + waking() +
+      '<button class="big10" data-a="local">📱 Back to pass &amp; play</button>';
+  }
+  var drawing = false, again = false;
+  function draw() { // re-entrancy guard: replacing innerHTML blurs a focused input, whose change handler calls draw() again
+    if (drawing) { again = true; return; } drawing = true;
+    try { draw0(); } finally { drawing = false; }
+    if (again) { again = false; draw(); }
+  }
+  function draw0() {
+    if (S.view === "off") { el.style.display = "none"; document.documentElement.classList.remove("ol10-on"); return; }
+    el.style.display = ""; document.documentElement.classList.add("ol10-on");
+    var f = document.activeElement, fid = f && f.id, pos = f && f.selectionStart;
+    el.innerHTML = '<div class="in10 v-' + S.view + '">' + ({ home: vHome, create: function () { return vForm(false); }, join: function () { return vForm(true); }, lobby: vLobby, rules: vRules, game: vGame }[S.view])() + "</div>" + (S.toast ? '<div class="toast10">' + esc(S.toast) + "</div>" : "");
+    if (fid) { var n = document.getElementById(fid); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
+  }
+
+  /* ---------- input ---------- */
+  function setRule(k, v, input) {
+    var s = J(settings()), h = s.houseRules, d = s.disconnect;
+    if (k === "parking") h.parking.mode = v; else if (k === "parkAmt") h.parking.amount = Math.max(0, Math.min(5000, Math.floor(+v) || 0));
+    else if (k === "speed") h.speed = v; else if (k === "startingDeal" || k === "startingCash") h[k] = +v;
+    else if (k === "doubleGo" || k === "auctionOnPass" || k === "noRentInJail") h[k] = !!input.checked;
+    else if (k === "dmode") d.mode = v; else if (k === "style") d.computerStyle = v; else if (k === "timer") d.timerMin = +v;
+    sendSettings(s);
+  }
+  function sendSettings(s) { S.room.settings = s; S.room.seats.forEach(function (x) { x.agreed = false; }); net.setSettings(s); draw(); }
+  function share() {
+    var url = "https://timf76-eng.github.io/travel-monopoly/?room=" + S.room.code, text = "Join my Travel Monopoly game! Room " + S.room.code;
+    if (navigator.share) navigator.share({ title: "Tim's Travel Monopoly", text: text, url: url }).catch(function () {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(text + ": " + url).then(function () { flash("Link copied"); }, function () { flash(url); });
+    else flash(url);
+  }
+  el.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.id === "name10") { prof.name = t.value; ls(ME_KEY, prof); draw(); }
+    else if (t.id === "code10") { S.code = t.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); t.value = S.code; S.peek = null; if (S.code.length === 4) connect().peek(S.code); draw(); }
+  });
+  el.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.dataset.a === "set" && amHost()) setRule(t.dataset.k, t.value, t);
+    else if (t.id === "pre10" && t.value) { var p = (ls(PRESET_KEY) || {})[t.value]; if (p) { sendSettings(J(p)); flash("Loaded \u201c" + t.value + "\u201d"); } }
+  });
+  el.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-a]"); if (!b || b.disabled || b.tagName === "SELECT" || b.tagName === "INPUT") return;
+    var a = b.dataset.a; S.err = "";
+    if (a === "local") { S.view = "off"; draw(); return; }
+    if (a === "home") S.view = "home";
+    else if (a === "goCreate") { S.view = "create"; connect(); }
+    else if (a === "goJoin") { S.view = "join"; connect(); if (S.code.length === 4) net.peek(S.code); }
+    else if (a === "tok") prof.token = b.dataset.v, ls(ME_KEY, prof);
+    else if (a === "create") { S.busy = true; connect().createRoom({ name: prof.name.trim(), token: prof.token, theme: typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? ThemeKit.current() : null, settings: ls(PRESET_KEY + ".last") || null }); }
+    else if (a === "join") { S.busy = true; connect().joinRoom(S.code, prof.name.trim(), prof.token); }
+    else if (a === "rejoin") { var me = ls(Net9.KEY); S.view = "lobby"; connect().rejoin(me.code, me.rt); }
+    else if (a === "leave") { if (confirm(amHost() ? "Close this room for everyone?" : "Leave this room?")) net.leave(); return; }
+    else if (a === "share") share();
+    else if (a === "rules") S.view = "rules";
+    else if (a === "lobby") S.view = "lobby";
+    else if (a === "agree") net.agree(!S.room.seats[S.you].agreed);
+    else if (a === "start") { ls(PRESET_KEY + ".last", S.room.settings); net.start(); }
+    else if (a === "set" && amHost()) setRule(b.dataset.k, b.dataset.v, b);
+    else if (a === "preSave") { var n = (document.getElementById("preName").value || "").trim(); if (!n) return flash("Type a preset name first"); var ps = ls(PRESET_KEY) || {}; ps[n] = settings(); ls(PRESET_KEY, ps); flash("Saved \u201c" + n + "\u201d"); }
+    else if (a === "preDel") { var sel = document.getElementById("pre10").value; if (!sel) return flash("Pick a preset to delete"); var ps2 = ls(PRESET_KEY) || {}; delete ps2[sel]; ls(PRESET_KEY, ps2); }
+    draw();
+  });
+  var saved = ls(Net9.KEY);
+  if (S.view === "join" && saved && saved.code === S.code && saved.rt) { S.view = "lobby"; connect().rejoin(saved.code, saved.rt); } // reload / reopened link: take my seat back
+  else if (S.view === "join") connect();
+  draw();
+  window.Lobby10 = { state: S, show: function () { S.view = "home"; draw(); } };
+})();
+
+</script>
 </body>
 </html>
