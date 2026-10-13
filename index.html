@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11.1">
+<meta name="tm-version" content="v11.2">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -702,6 +702,23 @@ html.phone body.p9 .cardbig .ctext{font-size:22px}
 html.phone body.p9 .fxhint{font-size:16px}
 @media (prefers-reduced-motion: reduce){html.phone body.p9 .flipper{transition:none}html.phone body.p9 .flipwrap{transition:opacity .15s}}
 
+
+#chat112b{position:relative;border:0;background:#ffffff22;color:#fff;border-radius:9px;padding:1px 6px;font-size:13px;line-height:1.3;cursor:pointer;pointer-events:auto}
+#chat112b .n{position:absolute;top:-6px;right:-7px;background:#e53935;color:#fff;border-radius:9px;font-size:10px;min-width:15px;padding:0 3px;line-height:15px;text-align:center;font-weight:700}
+#chat112{position:fixed;inset:0;z-index:60;background:#0008;display:flex;align-items:center;justify-content:center}
+#chat112 .bx{background:#14315c;color:#fff;border-radius:14px;width:min(94vw,420px);max-height:min(78vh,560px);display:flex;flex-direction:column;padding:10px;gap:7px;box-sizing:border-box;box-shadow:0 8px 30px #0009}
+#chat112 .hd{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+#chat112 .hd button{border:0;background:none;color:#fff;font-size:18px;cursor:pointer}
+#chat112 .ls{flex:1 1 auto;min-height:60px;overflow-y:auto;overscroll-behavior:contain;background:#0003;border-radius:9px;padding:6px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+#chat112 .m{word-wrap:break-word;overflow-wrap:anywhere}#chat112 .m b{color:#ffc93c}#chat112 .m.me b{color:#8fe3a0}
+#chat112 .em{opacity:.7;text-align:center;font-size:13px}
+#chat112 .qr{display:flex;gap:5px;flex-wrap:wrap}#chat112 .qr button{border:0;border-radius:14px;padding:4px 9px;background:#ffc93c;color:#14315c;font-weight:700;font-size:13px;cursor:pointer}
+#chat112 form{display:flex;gap:5px}#chat112 input{flex:1;min-width:0;border-radius:9px;border:0;padding:7px;font-size:16px}
+#chat112 form button{border:0;border-radius:9px;background:#2e7d32;color:#fff;font-weight:700;padding:0 12px}
+#chat112 .rt{font-size:12px;color:#ffb4b4;min-height:0}
+#chatt112{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:55;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;width:min(88vw,360px)}
+#chatt112 .t{background:#fffffff0;color:#14315c;border-radius:14px;padding:5px 11px;font-size:14px;box-shadow:0 3px 12px #0006;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity .4s,transform .4s}
+#chatt112 .t.out{opacity:0;transform:translateY(-8px)}
 </style>
 </head>
 <body>
@@ -1296,6 +1313,10 @@ var Engine = (function () {
   function isHeld(st, deck, idx) {
     return deckCards(deck)[idx].action.type === "jailFree" && st.players.some(function (p) { return p.jailCards.indexOf(deck) >= 0; });
   }
+  function cardPay(st, p, amt, why) { // v11.2: bank payment from a card, logged (and where it went)
+    var c0 = p.cash, pot0 = st.pot || 0; charge(st, p, amt, null, why);
+    if (p.cash < c0) { var ls = D.spaces[20]; log(st, "💸 " + p.name + " pays " + money(amt) + ((st.pot || 0) > pot0 ? " into the " + (ls.short || ls.name) + " pot (now " + money(st.pot) + ")" : " to the bank") + "."); }
+  }
   function drawCard(st, p, deck, ctx) {
     var d = st.decks[deck], idx = null;
     for (var tries = 0; tries < d.order.length + 1; tries++) {
@@ -1320,17 +1341,17 @@ var Engine = (function () {
       }
       case "back": moveSteps(st, p, -a.steps, ctx); break;
       case "forward": moveSteps(st, p, a.steps, ctx); break;
-      case "collect": p.cash += a.amount; break;
-      case "pay": charge(st, p, a.amount, null, "card"); break;
-      case "payEach": others.forEach(function (q) { charge(st, p, a.amount, q.id, "card"); }); break;
-      case "collectEach": others.forEach(function (q) { charge(st, q, a.amount, p.id, "card"); }); break;
+      case "collect": p.cash += a.amount; log(st, "💰 " + p.name + " collects " + money(a.amount) + "."); break;
+      case "pay": cardPay(st, p, a.amount, "card"); break;
+      case "payEach": others.forEach(function (q) { var c0 = p.cash; charge(st, p, a.amount, q.id, "card"); if (p.cash < c0) log(st, "💸 " + p.name + " pays " + q.name + " " + money(a.amount) + "."); }); break;
+      case "collectEach": others.forEach(function (q) { var c0 = q.cash; charge(st, q, a.amount, p.id, "card"); if (q.cash < c0) log(st, "💰 " + q.name + " pays " + p.name + " " + money(a.amount) + "."); }); break;
       case "jailFree": p.jailCards.push(deck); break;
       case "gotoJail": sendToJail(st, p); break;
       case "repairs": {
         var h = 0, H = 0;
         Object.keys(st.props).forEach(function (k2) { var o = st.props[k2]; if (o.owner === p.id) { if (o.houses === 5) H++; else h += o.houses; } });
         var amt = h * a.house + H * a.hotel;
-        if (amt > 0) { log(st, "🔧 " + h + " houses, " + H + " hotels: " + money(amt) + "."); charge(st, p, amt, null, "repairs"); }
+        if (amt > 0) { log(st, "🔧 " + h + " houses, " + H + " hotels: " + money(amt) + "."); cardPay(st, p, amt, "repairs"); }
         break;
       }
     }
@@ -7635,6 +7656,7 @@ var Net9 = (function () {
       start: function () { raw({ t: "start" }); },
       sendAction: function (a) { raw({ t: "action", action: a }); },
       vote: function (choice) { raw({ t: "vote", choice: choice }); },
+      chat: function (text) { raw({ t: "chat", text: String(text || "").slice(0, 200) }); }, // v11.2: room chat (server relays, keeps the last 50)
       recap: function (from) { raw({ t: "log", from: from || 0 }); },
       isOpen: function () { return !!ws && ws.readyState === 1; },
       me: function () { return me; }, forget: function () { me = null; var s = store(); if (s) try { s.removeItem(KEY); } catch (e) {} },
@@ -7717,7 +7739,7 @@ var Online11 = (function () {
     if (st.opts && st.opts.endsAt && st.phase !== "gameover") h += '<span class="tm11">⏱️ ' + mmss(st.opts.endsAt - now) + " left</span>";
     var host = (last.seats || []).filter(function (x) { return x.host; })[0];
     h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
-    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; placeBar();
+    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); placeBar();
     var v = last.vote, b = "";
     if (v && v.seat !== me) {
       var who = st.players[v.seat], mine = v.votes && v.votes[me];
@@ -7753,7 +7775,7 @@ var Online11 = (function () {
     UI.setOnline({ send: function (a) { net.sendAction(a); }, panel: panel });
     document.documentElement.classList.add("net11-on");
     net.on("state", function (m) { queue.push(m); pump(); });
-    net.on("recap", recap);
+    net.on("recap", recap); if (window.Chat112) Chat112.start(net, function () { return me; });
     net.on("error", function (m) { if (m.action) toast(m.msg); });
     net.on("event", function (e) {
       if (!last) return; var nm = function (i) { return last.state.players[i] ? last.state.players[i].name : "?"; };
@@ -8144,5 +8166,43 @@ html.pl103b.phone body #p9sheet .p9body{padding-top:2px;padding-bottom:2px}
 })();
 
 </script>
-</body>
+<script>
+var Chat112 = (function () { // v11.2 online chat. All message text goes in via textContent (never innerHTML).
+  var net = null, meFn = null, msgs = [], unread = 0, sent = [], btn = null, sheet = null, tbox = null;
+  var QUICK = ["Nice roll!", "Ouch!", "😂", "👏"];
+  function el(t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; }
+  function badge() { if (!btn) return; var n = btn.querySelector(".n"); if (unread > 0) { if (!n) { n = el("span", "n"); btn.appendChild(n); } n.textContent = unread > 9 ? "9+" : unread; } else if (n) n.remove(); }
+  function mount(bar) { if (!net) return; if (!btn) { btn = el("button", "", "💬"); btn.id = "chat112b"; btn.type = "button"; btn.setAttribute("aria-label", "Chat");
+      btn.addEventListener("click", function (e) { e.stopPropagation(); open(); }); badge(); } if (btn.parentNode !== bar) bar.appendChild(btn); }
+  function isOpen() { return !!(sheet && sheet.parentNode); }
+  function line(m) { var d = el("div", "m" + (m.seat === meFn() ? " me" : "")); d.appendChild(el("b", "", (m.token || "") + " " + (m.name || "?") + ": ")); d.appendChild(document.createTextNode(m.text)); return d; }
+  function draw() { if (!isOpen()) return; var ls = sheet.querySelector(".ls"); ls.textContent = "";
+    if (!msgs.length) ls.appendChild(el("div", "em", "No messages yet. Say hi!")); msgs.forEach(function (m) { ls.appendChild(line(m)); }); ls.scrollTop = ls.scrollHeight; }
+  function open() { if (isOpen()) return; unread = 0; badge();
+    sheet = el("div"); sheet.id = "chat112"; var bx = el("div", "bx"); sheet.appendChild(bx);
+    var hd = el("div", "hd"); hd.appendChild(el("span", "", "💬 Table chat")); var x = el("button", "", "✕"); x.type = "button"; x.dataset.c112 = "close"; hd.appendChild(x); bx.appendChild(hd);
+    bx.appendChild(el("div", "ls")); var qr = el("div", "qr"); QUICK.forEach(function (q) { var b = el("button", "", q); b.type = "button"; b.dataset.q = q; qr.appendChild(b); }); bx.appendChild(qr);
+    var f = el("form"); var inp = el("input"); inp.maxLength = 200; inp.placeholder = "Message (200 max)"; inp.autocomplete = "off"; f.appendChild(inp); var sb = el("button", "", "Send"); sb.type = "submit"; f.appendChild(sb); bx.appendChild(f);
+    bx.appendChild(el("div", "rt"));
+    sheet.addEventListener("click", function (e) { e.stopPropagation(); if (e.target === sheet || e.target.dataset.c112 === "close") close(); else if (e.target.dataset.q) send(e.target.dataset.q); });
+    f.addEventListener("submit", function (e) { e.preventDefault(); if (send(inp.value)) inp.value = ""; });
+    document.body.appendChild(sheet); draw(); }
+  function close() { if (sheet) sheet.remove(); sheet = null; }
+  function warn(t) { if (isOpen()) { var r = sheet.querySelector(".rt"); r.textContent = t; clearTimeout(warn.t); warn.t = setTimeout(function () { if (sheet) sheet.querySelector(".rt").textContent = ""; }, 2500); } else toastMsg({ text: t }); }
+  function send(t) { t = String(t || "").replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200); if (!t || !net) return false;
+    var now = Date.now(); sent = sent.filter(function (x) { return now - x < 10000; }); if (sent.length >= 5) { warn("Slow down: wait a few seconds."); return false; }
+    sent.push(now); net.chat(t); return true; }
+  function toastMsg(m) { if (!tbox) { tbox = el("div"); tbox.id = "chatt112"; document.body.appendChild(tbox); }
+    var t = el("div", "t", m.name ? (m.token || "") + " " + m.name + ": " + m.text : m.text); tbox.appendChild(t);
+    while (tbox.children.length > 3) tbox.firstChild.remove();
+    setTimeout(function () { t.classList.add("out"); setTimeout(function () { t.remove(); }, 450); }, 3500); }
+  function add(m) { if (!m || typeof m.text !== "string") return; msgs.push(m); if (msgs.length > 50) msgs.shift();
+    if (isOpen()) draw(); else { if (m.seat !== meFn()) { unread++; badge(); } toastMsg(m); } }
+  function start(n, me) { net = n; meFn = me;
+    n.on("chat", function (m) { add(m.msg); });
+    n.on("chatlog", function (m) { msgs = (m.msgs || []).slice(-50); draw(); });
+    n.on("error", function (m) { if (m.chat) warn(m.msg); }); }
+  return { start: start, mount: mount, open: open, close: close, unread: function () { return unread; }, msgs: function () { return msgs; } };
+})();
+</script></body>
 </html>
