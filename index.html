@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11 (on v10.3)">
+<meta name="tm-version" content="v11.1">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6701,8 +6701,20 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     t.y = 0; t.x = Math.max(-lim, Math.min(lim, t.x)); t.z = Math.max(-lim, Math.min(lim, t.z));
     dirty = true;
   });
-  controls.addEventListener("start", function () { camTween = null; follow = null; userDrag = true; }); // the user takes over: no auto-return
-  controls.addEventListener("end", function () { userDrag = false; zoomCheck(); });
+  controls.addEventListener("start", function () { camTween = null; follow = null; userDrag = true; userMoved = true; }); // the user takes over: no auto-return
+  var userMoved = false, safeKey = "", safePending = false;
+  function atReset() { var v = viewFor("reset"); return camera.position.distanceTo(v.pos) < .05 && controls.target.distanceTo(v.target) < .05; }
+  function safety() { // v11.1: when the turn changes or the Roll button comes back, an idle camera snaps back to the full board (unless the user zoomed)
+    var st = state(); if (!st) return false;
+    var k = st.turn + "|" + st.phase + "|" + st.turnCount + "|" + (st.dice ? st.dice.join(",") : "") + "|" + st.log.length + "|" + st.log[st.log.length - 1];
+    if (k !== safeKey) { safeKey = k; safePending = true; }
+    if (!safePending || (UI() && UI().isAnimating()) || camTween || follow || userDrag || mover) return false;
+    safePending = false;
+    if (zoomed || atReset()) return false;
+    userMoved = false; goView("reset"); return true;
+  }
+  var gestD = 0; controls.addEventListener("start", function () { gestD = camera.position.distanceTo(controls.target); });
+  controls.addEventListener("end", function () { userDrag = false; if (Math.abs(camera.position.distanceTo(controls.target) - gestD) > .4) zoomCheck(); });
 
   /* ---------- v10.3: board zoom. ~2x closer, one finger pans while zoomed, reset snaps back to the full board ---------- */
   var zoomed = false;
@@ -6724,7 +6736,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   }
   function zoomTo(pt) { var v = zoomView(pt); follow = null; camTween = { from: camera.position.clone(), fromT: controls.target.clone(), to: v.pos, toT: v.target, start: performance.now(), ms: 450 }; setZoomed(true); }
   function zoomReset() { follow = null; setZoomed(false); goView("reset"); }
-  function tokenPt(pid) { var d = discs[pid]; return d && d.cur ? new THREE.Vector3(d.cur.x, 0, d.cur.z) : new THREE.Vector3(0, 0, 0); }
+  function tokenPt(pid) { var st = state(), p = st && st.players[pid]; if (p) { var r = RECTS[p.pos]; return new THREE.Vector3(r.x0 + r.w / 2, 0, r.z0 + r.d / 2); } var d = discs[pid]; return d && d.cur ? new THREE.Vector3(d.cur.x, 0, d.cur.z) : new THREE.Vector3(0, 0, 0); }
 
   /* ---------- optional camera follow (toolbar toggle, default off) ---------- */
   var FOLLOW_KEY = "timTravelMonopoly.follow103", followOn = true, follow = null, userDrag = false; // v10.3: auto-zoom follow, default on
@@ -6745,7 +6757,8 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       dirty = true; return true;
     }
     if (follow && (now - follow.last > 1600 || (now - follow.last > 500 && !(UI() && UI().isAnimating())))) {
-      camTween = { from: camera.position.clone(), fromT: controls.target.clone(), to: follow.pos, toT: follow.target, start: now, ms: 800 };
+      var rv = zoomed ? { pos: follow.pos, target: follow.target } : viewFor("reset");
+      camTween = { from: camera.position.clone(), fromT: controls.target.clone(), to: rv.pos, toT: rv.target, start: now, ms: 800 };
       follow = null; return true;
     }
     return !!follow;
@@ -6853,6 +6866,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     if (runBuildings(dt)) anim = true;
     if (Object.keys(held).length && !(UI() && UI().isAnimating())) { held = {}; needSync = true; } // safety: never hold past the animation
     if (runFollow(now, dt)) anim = true;
+    else if (safety()) anim = true;
     if (runFlashes(now)) anim = true;
     if (dirty || anim) { renderer.render(scene, camera); dirty = false; fpsGuard(now, anim); } else fpsPrev = 0;
   }
@@ -7959,6 +7973,8 @@ html,body{touch-action:manipulation}
   font-weight:800;font-size:16px;line-height:1.25;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;
 }
 .ban103.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.tick103.quiet{opacity:0}
+.tick103{transition:opacity .6s;white-space:normal!important;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.35!important;padding-top:2px!important;padding-bottom:2px!important}
 .tick103{position:fixed;left:6px;top:0;z-index:30;line-height:1.6;padding:0 8px;border-radius:10px;background:rgba(255,250,235,.88);color:#2b1d0a;
   font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 body:not(.b3d) .tick103{background:rgba(255,250,235,.95)}
@@ -8075,10 +8091,22 @@ html.pl103b.phone body #p9sheet .p9body{padding-top:2px;padding-bottom:2px}
   function isHdr(l) { return /^—/.test(l) || /is up first|New trip begins/.test(l); }
   var BIG = /rent|pays|paid|collect|receiv|buys|bought|wins|bankrupt|jail|customs|auction|jackpot|takes|gets|go to|advance|build|mortgag/i;
   function showBanner(t) { place(); ban.textContent = t; ban.classList.remove("on"); void ban.offsetWidth; ban.classList.add("on"); clearTimeout(banT); banT = setTimeout(function () { ban.classList.remove("on"); }, 2600); }
-  function ticker(st) {
-    var out = []; for (var i = st.log.length - 1; i >= 0 && out.length < 3; i--) if (!isHdr(st.log[i])) out.push(nice(st.log[i]));
+  var tickT = 0;
+  function ticker(st, fresh) { // v11.1: newest event first (up to 2 lines), refreshed on every new log line, fades after 6s of quiet
+    var out = []; for (var i = st.log.length - 1; i >= 0 && out.length < 2; i--) if (!isHdr(st.log[i])) out.push(nice(st.log[i]));
     var t = out.join("  •  "); if (tick.textContent !== t) { tick.textContent = t; tick.title = out.join("\n"); }
     tick.style.display = t ? "" : "none";
+    if (fresh) { tick.classList.remove("quiet"); clearTimeout(tickT); tickT = setTimeout(function () { tick.classList.add("quiet"); }, 6000); }
+  }
+  var tail = null;
+  function tailOf(L) { return L.slice(-4); }
+  function freshSince(L) { // lines added since the remembered tail (works when the 400-line log cap drops old lines)
+    if (!tail) return [];
+    for (var i = L.length - 1; i >= tail.length - 1; i--) {
+      var hit = true; for (var k = 0; k < tail.length; k++) if (L[i - k] !== tail[tail.length - 1 - k]) { hit = false; break; }
+      if (hit) return L.slice(i + 1);
+    }
+    return L.slice(-3);
   }
   function owners(st) { // 2D board: owner-colour strip (+ hatching for mortgaged comes from .mortgaged)
     var sig = JSON.stringify(st.props); if (sig === ownSig && board.querySelector(".cell")) return; ownSig = sig;
@@ -8100,11 +8128,13 @@ html.pl103b.phone body #p9sheet .p9body{padding-top:2px;padding-bottom:2px}
     fitMenu(); fitPlayers();
     place(); var on = !!board.querySelector(".cell") && !!host.offsetParent; ban.hidden = tick.hidden = !on;
     var st = S(); if (!st || !st.log) { tick.style.display = "none"; return; }
-    if (st !== lastSt) { if (!lastSt || st.log.length < seen) seen = st.log.length; lastSt = st; ticker(st); }
+    if (st !== lastSt) { if (!lastSt) tail = tailOf(st.log); lastSt = st; if (!tail) tail = tailOf(st.log); ticker(st); }
     if (!board.querySelector(".cell")) return;
     owners(st);
-    if (busy() || st.log.length === seen) return;
-    var fresh = st.log.slice(seen).filter(function (l) { return !isHdr(l); }); seen = st.log.length; ticker(st);
+    if (busy()) return;
+    var added = freshSince(st.log); if (!added.length) return;
+    tail = tailOf(st.log); ticker(st, true);
+    var fresh = added.filter(function (l) { return !isHdr(l); });
     var pick = null; for (var i = fresh.length - 1; i >= 0; i--) if (BIG.test(fresh[i])) { pick = fresh[i]; break; }
     if (!pick && fresh.length) pick = fresh[fresh.length - 1];
     if (pick && !fast()) showBanner(nice(pick));
