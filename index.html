@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v10.3">
+<meta name="tm-version" content="v11 (on v10.3)">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1056,7 +1056,10 @@ var ThemeKit = (function () {
 <div id="fx"></div>
 <canvas id="confetti"></canvas>
 <script id="rules-engine">
-/* ===================== RULES ENGINE (no DOM; testable in node) ===================== */
+/* ===================== RULES ENGINE v11 (no DOM; runs in browser + node) =====================
+   v11 = v9 engine + online house rules in st.opts (all off by default, so a v9-style game plays identically):
+   speedDie, doubleGo ($400 for landing exactly on GO), noRentInJail, auctionOnPass (false: a declined lot stays unowned),
+   startingDeal (0/2/3 random properties each), timeUp action (timed games: richest net worth wins), conservative CPU level. */
 var Engine = (function () {
   var D = null;
   var rng = Math.random;
@@ -1098,7 +1101,7 @@ var Engine = (function () {
   function shuffled(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); for (var j = n - 1; j > 0; j--) { var k = Math.floor(rng() * (j + 1)); var t = a[j]; a[j] = a[k]; a[k] = t; } return a; }
   function deckCards(name) { return name === "chance" ? D.chanceCards : D.chestCards; }
 
-  function log(st, msg) { st.log.push(msg); if (st.log.length > 400) st.log.splice(0, st.log.length - 400); }
+  function log(st, msg) { st.logN = (st.logN || st.log.length) + 1; st.log.push(msg); if (st.log.length > 400) st.log.splice(0, st.log.length - 400); }
   function cur(st) { return st.players[st.turn]; }
   function alive(st) { return st.players.filter(function (p) { return !p.bankrupt; }); }
 
@@ -1168,13 +1171,13 @@ var Engine = (function () {
     p.pos = to; log(st, "🚗 " + p.name + " drives to " + sp(to).name + ".");
     st.phase = "end"; land(st, p, {});
   }
-  var CPU_LEVELS = { easy: "Easy", medium: "Medium", hard: "Hard" };
+  var CPU_LEVELS = { easy: "Easy", medium: "Medium", hard: "Hard", conservative: "Conservative" };
   var SAVVY = { naive: "Naive", fair: "Fair", shrewd: "Shrewd" };
   var OFFER_COOLDOWN = 5; // a CPU won't repeat a declined offer to the same player for this many of its own turns
   function newGame(players, opts) {
     opts = opts || {};
     var st = {
-      v: 1, opts: { autoMortgage: opts.autoMortgage === true, parking: normParking(opts.parking) }, players: players.map(function (p, i) {
+      v: 1, opts: { autoMortgage: opts.autoMortgage === true, parking: normParking(opts.parking), speedDie: opts.speedDie === true, doubleGo: opts.doubleGo === true, noRentInJail: opts.noRentInJail === true, auctionOnPass: opts.auctionOnPass !== false, startingDeal: [2, 3].indexOf(opts.startingDeal) >= 0 ? opts.startingDeal : 0, endsAt: opts.endsAt || null }, players: players.map(function (p, i) {
         var pl = { id: i, name: p.name, token: p.token, cpu: !!p.cpu, level: p.cpu ? (CPU_LEVELS[p.level] ? p.level : "medium") : undefined, cash: D.rules.startingCash, pos: 0, inJail: false, jailTurns: 0, jailCards: [], bankrupt: false, ownTurns: i === 0 ? 1 : 0 };
         if (pl.cpu) { pl.savvy = SAVVY[p.savvy] ? p.savvy : "fair"; pl.offerMemo = { lastTurn: 0, declined: [] }; }
         else { pl.tradePrefs = { mode: "accept", turns: 0 }; pl.autoBuild = normAutoBuild(p.autoBuild); }
@@ -1190,10 +1193,25 @@ var Engine = (function () {
     log(st, "✈️ New trip begins! " + st.players.map(function (p) { return p.token + " " + p.name + (p.cpu ? " 🤖 " + CPU_LEVELS[p.level] + ", " + SAVVY[p.savvy] + " trader" : ""); }).join(", ") + ".");
     if (st.opts.autoMortgage) log(st, "Always auto-mortgage is on: anyone short on cash raises it automatically.");
     if (st.opts.parking.mode !== "classic") log(st, "🛋️ " + loungeName() + " rule: " + parkingText(st) + ".");
+    if (st.opts.startingDeal) dealStart(st, st.opts.startingDeal);
+    if (st.opts.speedDie) log(st, "🚌 Speed die is in play.");
+    if (st.opts.doubleGo) log(st, "🏠 Land exactly on GO to collect double (" + money(D.rules.goSalary * 2) + ").");
+    if (st.opts.noRentInJail) log(st, "🛃 No rent is collected by players in " + (D.meta.jailName || "Jail") + ".");
+    if (!st.opts.auctionOnPass) log(st, "🔨 No auctions: a property nobody buys stays unowned.");
     log(st, cur(st).token + " " + cur(st).name + " is up first.");
     return st;
   }
 
+  function dealStart(st, n) { // v11 starting deal: n random properties each, free
+    var lots = D.spaces.filter(function (s) { return s.type === "property"; }).map(function (s) { return s.pos; });
+    for (var i = lots.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)), t = lots[i]; lots[i] = lots[j]; lots[j] = t; }
+    st.players.forEach(function (p, k) {
+      var mine = lots.slice(k * n, k * n + n); mine.forEach(function (q) { st.props[q] = { owner: p.id, houses: 0, mortgaged: false }; });
+      if (mine.length) log(st, "🎁 " + p.name + " is dealt " + mine.map(function (q) { return sp(q).name; }).join(", ") + ".");
+    });
+  }
+  var SPEED_FACES = [1, 2, 3, "mr", "mr", "bus"];
+  function nextUnowned(st, from) { for (var k = 1; k < 40; k++) { var q = (from + k) % 40; if (isOwnable(q) && !st.props[q]) return q; } return null; }
   /* ---------- rent ---------- */
   function ownsGroup(st, owner, g) { return groupPositions(g).every(function (q) { return st.props[q] && st.props[q].owner === owner; }); }
   function countOwned(st, owner, type) { var n = 0; D.spaces.forEach(function (s) { if (s.type === type && st.props[s.pos] && st.props[s.pos].owner === owner) n++; }); return n; }
@@ -1237,7 +1255,8 @@ var Engine = (function () {
     log(st, "🛃 " + p.name + " goes to " + (D.meta.jailName || "Jail") + "!");
   }
   function advanceTo(st, p, dest, ctx) {
-    if (dest < p.pos || (dest === 0 && p.pos !== 0)) { p.cash += D.rules.goSalary; log(st, "🏠 " + p.name + " passes GO and collects " + money(D.rules.goSalary) + "."); }
+    if (dest === 0 && p.pos !== 0 && st.opts && st.opts.doubleGo) { p.cash += D.rules.goSalary * 2; log(st, "🏠 " + p.name + " lands right on GO and collects double: " + money(D.rules.goSalary * 2) + "."); }
+    else if (dest < p.pos || (dest === 0 && p.pos !== 0)) { p.cash += D.rules.goSalary; log(st, "🏠 " + p.name + " passes GO and collects " + money(D.rules.goSalary) + "."); }
     emit({ type: "move", pid: p.id, from: p.pos, to: dest, dir: 1 });
     p.pos = dest; land(st, p, ctx);
   }
@@ -1259,6 +1278,7 @@ var Engine = (function () {
     if (o.owner === p.id) return;
     if (o.mortgaged) { log(st, s.name + " is mortgaged: no rent."); return; }
     if (p.freeRent) { delete p.freeRent; log(st, "😴 " + p.name + "'s free rest covers the rent on " + s.name + "."); return; }
+    if (st.opts && st.opts.noRentInJail && st.players[o.owner].inJail) { log(st, "🛃 " + st.players[o.owner].name + " is in " + (D.meta.jailName || "Jail") + ": no rent on " + s.name + "."); return; }
     var dt = ctx.diceTotal;
     if (s.type === "utility" && (ctx.utilityTen || !dt)) { var a = die(), b = die(); dt = a + b; log(st, "🎲 Rolled " + a + "+" + b + " for the airline fare."); }
     var rent = rentFor(st, p.pos, dt, ctx);
@@ -1792,7 +1812,15 @@ var Engine = (function () {
             if (st.doubles >= 3) { log(st, "Three doubles in a row!"); sendToJail(st, p); return null; }
           }
           st.rollAgain = dbl;
-          moveSteps(st, p, tot, { diceTotal: tot });
+          var spd = st.opts.speedDie ? SPEED_FACES[Math.floor(rng() * 6)] : null;
+          if (fixed && st.opts.speedDie && a.speed !== undefined) spd = a.speed; // tests
+          if (spd !== null) { st.speed = spd; emit({ type: "speed", face: spd, pid: p.id }); log(st, "🚌 Speed die: " + (spd === "mr" ? "Mr. Monopoly" : spd === "bus" ? "Bus" : spd) + "."); } else st.speed = null;
+          var steps = tot + (typeof spd === "number" ? spd : 0);
+          moveSteps(st, p, steps, { diceTotal: steps });
+          if (spd === "mr" && st.phase === "end" && !st.debts.length && !p.inJail) {
+            var nu = nextUnowned(st, p.pos);
+            if (nu !== null) { log(st, "🎩 Mr. Monopoly: " + p.name + " heads on to " + sp(nu).name + "."); advanceTo(st, p, nu, { diceTotal: steps }); }
+          }
           if (p.inJail) st.rollAgain = false;
         }
         return null;
@@ -1820,6 +1848,7 @@ var Engine = (function () {
       case "decline":
         if (st.phase !== "buy") return "Nothing to decline";
         log(st, p.name + " declines " + sp(p.pos).name + ".");
+        if (st.opts.auctionOnPass === false) { log(st, sp(p.pos).name + " stays unowned (no auctions)."); st.phase = "end"; return null; }
         startAuction(st, p.pos); return null;
       case "bid": {
         if (st.phase !== "auction") return "No auction running";
@@ -1960,6 +1989,12 @@ var Engine = (function () {
         if (cp.savvy !== a.savvy) { cp.savvy = a.savvy; log(st, "🤖 " + cp.name + " now trades as a " + SAVVY[a.savvy] + " trader."); }
         return null;
       }
+      case "timeUp": {
+        var rich = alive(st).sort(function (x, y) { return netWorth(st, y.id) - netWorth(st, x.id); })[0];
+        st.winner = rich.id; st.phase = "gameover"; st.debts = []; st.auction = null; st.trade = null;
+        log(st, "⏰ Time's up! " + rich.name + " is the richest with net worth " + money(netWorth(st, rich.id)) + " and wins.");
+        return null;
+      }
       case "endGameNow": {
         var best = alive(st).sort(function (x, y) { return netWorth(st, y.id) - netWorth(st, x.id); })[0];
         st.winner = best.id; st.phase = "gameover"; st.debts = []; st.auction = null; st.trade = null;
@@ -2000,7 +2035,7 @@ var AI = (function () {
   var BUILD_CUSHION = 300;    // medium: cash kept after building
   var UNMORTGAGE_CUSHION = 450;
   var LIQ_RESERVE = 100;      // medium: what must be left (cash + mortgageable lots) after a bid funded by mortgages
-  var LEVELS = { easy: "Easy", medium: "Medium", hard: "Hard" };
+  var LEVELS = { easy: "Easy", medium: "Medium", hard: "Hard", conservative: "Conservative" }; // v11: conservative (online stand-in)
   // Hard builds in this order of preference (best return per dollar on a standard board), others after.
   var HARD_GROUP_PREF = { orange: 0, red: 1, lightblue: 2, pink: 3, yellow: 4, darkblue: 5, green: 6, brown: 7 };
   function init(data, engine) { D = data; E = engine; }
@@ -2341,6 +2376,7 @@ var AI = (function () {
     if (!st || st.phase === "gameover") return null;
     var who = E.actor(st);
     if (!isCpu(st, who)) return null;
+    if (level(st, who) === "conservative") return conservative(st, who);
     if (st.trade) return answerTrade(st);
     var p = st.players[who];
     switch (st.phase) {
@@ -2363,6 +2399,25 @@ var AI = (function () {
         var tr2 = tradeOffer(st, who); if (tr2) return tr2;
         return { type: "endTurn" };
       }
+    }
+    return null;
+  }
+  // v11 Conservative: no trades, never sells/mortgages/builds/unmortgages by choice (the engine still auto-raises to avoid
+  // bankruptcy), buys only when the price is at most half its cash, bids at most min(list price, half its cash).
+  function conservative(st, who) {
+    var p = st.players[who];
+    if (st.trade) return { type: "rejectTrade" };
+    switch (st.phase) {
+      case "roll": if (p.inJail) { var j = jailMove(st, who); if (j) return j; } return { type: "roll" };
+      case "buy": return sp(p.pos).price <= p.cash / 2 ? { type: "buy" } : { type: "decline" };
+      case "auction": {
+        var a = st.auction, cap = Math.min(sp(a.pos).price, Math.floor(p.cash / 2)), bid = a.high + 10;
+        if (a.highBidder === who) return { type: "pass", player: who };
+        return bid <= cap ? { type: "bid", amount: bid, player: who } : { type: "pass", player: who };
+      }
+      case "debt": return st.players[st.debts[0].from].cash >= st.debts[0].amount ? { type: "payDebt" } : { type: "bankrupt" };
+      case "freemove": return { type: "freeMove", to: null };
+      case "end": return { type: "endTurn" };
     }
     return null;
   }
@@ -3167,7 +3222,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   var SAVE_KEY = "timTravelMonopoly.save.v1", FAST_KEY = "timTravelMonopoly.fastMode";
   var TOKENS = ["✈️", "🧳", "🌍", "🚢", "🗺️", "📸", "🏝️", "🎒", "🚗", "🧭", "🕶️", "🏔️"];
   var PCOLORS = ["#e63946", "#1d6fd8", "#2a9d8f", "#f4a261", "#8e44ad", "#6d4c41"];
-  var st = null, ui = { modal: null, tradeDraft: null, lastDiceKey: "", storageOK: true };
+  var st = null, ui = { modal: null, tradeDraft: null, lastDiceKey: "", storageOK: true, online: null, me: -1 };
   E.setData(D); AI.init(D, E);
 
   function $(s) { return document.querySelector(s); }
@@ -3209,6 +3264,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
 
   /* ---------- persistence ---------- */
   function save() {
+    if (ui.online) return; // online: the server keeps the game
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ state: st, savedAt: Date.now() })); ui.storageOK = true; }
     catch (e) { ui.storageOK = false; }
   }
@@ -3224,6 +3280,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.style.opacity = 0; setTimeout(function () { t.style.display = "none"; }, 300); }, 2600);
   }
   function doAct(a) {
+    if (ui.online) { ui.online.send(a); return true; } // online: the server decides; its state comes back through netState
     skipAnimations();
     var prev = st ? st.players.map(function (p) { return { pos: p.pos, inJail: p.inJail }; }) : null;
     var wasOver = st && st.phase === "gameover";
@@ -3392,7 +3449,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
           var back = '<div class="cardback ' + cls + '"><div class="cb-ic">' + dk.icon + '</div><div class="cb-t">' + esc(dk.name) + '</div><div class="cb-s">✈ ' + esc(D.meta.title) + " ✈</div></div>";
           var front = '<div class="ticket cardbig ' + cls + '"><div class="main"><div class="band" style="background:var(--navy)"><span>' + dk.icon + " " + esc(dk.name) + "</span><span>" + esc(st.players[e.pid].name) +
             '</span></div><div class="ctext">' + esc(e.text) + '</div></div><div class="stub"><div class="lbl2">Gate</div><div class="val">' + (10 + e.idx) + '</div><div class="lbl2">Seat</div><div class="val">' + (e.idx + 1) + String.fromCharCode(65 + (e.idx % 6)) + "</div></div></div>";
-          SFX.swish(); return FX.flipCard(back, front, { cls: "cardflip", auto: st.players[e.pid].cpu ? (2600) : 0 });
+          SFX.swish(); return FX.flipCard(back, front, { cls: "cardflip", auto: st.players[e.pid].cpu || (ui.online && e.pid !== ui.me) ? (2600) : 0 });
         }
         if (e.type === "rent") {
           var cell = $("#board").children[e.pos], tag = cell && cell.querySelector(".owner-tag");
@@ -3439,6 +3496,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   }
   function actionPanel() {
     var p = st.players[st.turn], s = sp(p.pos), h = "";
+    if (ui.online) { var wp = ui.online.panel(st); if (wp !== null) return wp; }
     if (st.phase === "freemove" && !st.trade) { // v9 Free move rule
       var tg = E.freeMoveTargets(st);
       h += "<h3>🚗 Free move!</h3><div>Jump to any unowned property, then buy it or send it to auction. You have " + M(p.cash) + ".</div>";
@@ -3460,7 +3518,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
         h += "<h3>🤖 " + B.token + " " + esc(B.name) + " is looking over a trade</h3><div class='hint' style='text-align:center'>" + esc(A.name) + " offers " + tradeSide(t.give) + " for " + tradeSide(t.get) + ".</div>";
         return h;
       }
-      h += "<h3>🤝 Trade offer for " + B.token + " " + esc(B.name) + "</h3><div class='hint'>" + (A.cpu ? "From 🤖 " + esc(A.name) + " (" + esc(AI.savvyName(A.savvy)) + " trader)." : "Pass the laptop to " + esc(B.name) + ".") + "</div>";
+      h += "<h3>🤝 Trade offer for " + B.token + " " + esc(B.name) + "</h3><div class='hint'>" + (A.cpu ? "From 🤖 " + esc(A.name) + " (" + esc(AI.savvyName(A.savvy)) + " trader)." : passHint(B) + "") + "</div>";
       h += "<div style='margin-top:6px'><b>" + esc(A.name) + " gives:</b> " + tradeSide(t.give) + "</div>";
       h += "<div><b>" + esc(B.name) + " gives:</b> " + tradeSide(t.get) + "</div>";
       if (t.feeA || t.feeB) h += "<div class='hint'>10% fee on mortgaged property received: " + (t.feeA ? esc(A.name) + " pays " + M(t.feeA) + " " : "") + (t.feeB ? esc(B.name) + " pays " + M(t.feeB) : "") + "</div>";
@@ -3586,7 +3644,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     var getV = offerSideValue(t.give), giveV = offerSideValue(t.get), fee = t.feeB || 0, net = getV - giveV - fee;
     var h = '<h2>🤝 Trade offer' + (t.counter ? " (counter-offer)" : "") + "</h2>";
     h += '<div class="offerhead">' + (A.cpu ? '<span title="' + esc(botTitle(A)) + '">🤖</span> ' : "") + A.token + " <b>" + esc(A.name) + "</b>" + (A.cpu ? ' <span class="savvytag">' + esc(AI.savvyName(A.savvy)) + " trader</span>" : "") + " offers " + B.token + " <b>" + esc(B.name) + "</b> a deal</div>";
-    if (!A.cpu || st.players.filter(function (q) { return !q.cpu && !q.bankrupt; }).length > 1) h += "<div class='hint'>Pass the laptop to " + esc(B.name) + ".</div>";
+    if (!A.cpu || st.players.filter(function (q) { return !q.cpu && !q.bankrupt; }).length > 1) h += "<div class='hint'>" + passHint(B) + "</div>";
     h += '<div class="offercols"><div class="ocol oget"><h4>You get</h4>' + offerList(t.give, t, B.id) + '<div class="otot">Value ' + M(getV) + '</div></div>' +
       '<div class="ocol ogive"><h4>You give</h4>' + offerList(t.get, t, B.id) + '<div class="otot">Value ' + M(giveV) + "</div></div></div>";
     h += "<div class='onet'>By list value (mortgaged lots at their equity" + (fee ? ", minus your " + M(fee) + " mortgage fee" : "") + "): <b class='" + (net >= 0 ? "pos" : "neg") + "'>" + (net >= 0 ? "+" : "−") + M(Math.abs(net)) + "</b> for you. Cash after: " + M(B.cash + (t.give.cash || 0) - (t.get.cash || 0) - fee) + ".</div>";
@@ -3704,7 +3762,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       '<select data-parking class="parksel" aria-label="Free Parking rule">' + PARK_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + (pk === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select>" +
       (pk === "fixed" ? '<label class="parkamt">Payout $<input type="number" min="0" max="5000" step="10" data-parkamt value="' + (s.parkingAmount == null ? 200 : s.parkingAmount) + '" style="width:90px"></label>' : "") +
       '<div class="hint parkdesc">' + esc(E.parkingText({ opts: { parking: { mode: pk, amount: s.parkingAmount == null ? 200 : s.parkingAmount } } })) + "</div></div></div>";
-    h += "<p class='hint'>Humans take turns on this laptop; computer players take their own turns. The game saves automatically in this browser" + (ui.storageOK ? "" : " (autosave is unavailable in this browser mode)") + ".</p>";
+    h += "<p class='hint'>" + (ui.online ? "Everyone plays on their own phone; you get controls on your turn and see \"Waiting for …\" otherwise;" : "Humans take turns on this laptop;") + " computer players take their own turns. The game saves automatically in this browser" + (ui.storageOK ? "" : " (autosave is unavailable in this browser mode)") + ".</p>";
     h += '<div class="row" style="display:flex;gap:8px"><button class="primary big" data-ui="start">Start the trip ✈️</button>' + (st ? '<button data-ui="close">Cancel</button>' : "") + "</div>";
     return h;
   }
@@ -3776,10 +3834,12 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     if (pid === null || pid === undefined || st.players[pid].cpu || E.manager(st) !== pid) return null;
     return { kind: kind, pid: pid, need: need, what: what };
   }
+  // v11: hot-seat games say "Pass the laptop"; online games say whose move it is
+  function passHint(p) { return ui.online ? (p.id === ui.me ? "Your turn." : "Waiting for " + esc(p.name) + "…") : "Pass the laptop to " + esc(p.name) + "."; }
   function shortHTML(c, m) {
     var p = st.players[c.pid], ms = E.maxSpend(st, c.pid), canCover = ms >= c.need, still = Math.max(0, c.need - p.cash), h;
     h = "<h2>💸 Short on cash: " + p.token + " " + esc(p.name) + "</h2>";
-    if (st.turn !== c.pid) h += "<div class='hint'>Pass the laptop to " + esc(p.name) + ".</div>";
+    if (st.turn !== c.pid || (ui.online && c.pid !== ui.me)) h += "<div class='hint'>" + passHint(p) + "</div>";
     h += "<div class='shortwhat'>For " + c.what + ".</div>";
     h += "<div class='shortnums'><div><span>Owed</span><b>" + M(c.need) + "</b></div><div><span>Cash</span><b>" + M(p.cash) + "</b></div><div><span>Max you can raise</span><b>" + M(ms) + "</b></div><div><span>Still need</span><b id='shortStill'>" + M(still) + "</b></div></div>";
     if (m.view === "preview" && canCover) {
@@ -3910,7 +3970,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   function maybeOpenShort() {
     if (!st || st.phase !== "debt" || ui.busy || ui.modal || FX.overlayOpen()) return;
     var d = st.debts[0], dp = st.players[d.from];
-    if (dp.cpu || E.autoMortgageOn(st, dp.id) || dp.cash >= d.amount) return;
+    if (dp.cpu || (ui.online && dp.id !== ui.me) || E.autoMortgageOn(st, dp.id) || dp.cash >= d.amount) return;
     var key = st.turnCount + "|" + st.debts.length + "|" + JSON.stringify(d);
     if (ui.shortSeen === key) return;
     ui.shortSeen = key; openModal({ type: "short", ctx: "debt" });
@@ -3919,7 +3979,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   // A human who receives an offer gets the offer modal once per offer (they can reopen it from the center panel).
   function maybeOpenOffer() {
     if (!st || !st.trade || ui.busy || ui.modal || FX.overlayOpen()) return;
-    if (st.players[st.trade.to].cpu) return;
+    if (st.players[st.trade.to].cpu || (ui.online && st.trade.to !== ui.me)) return;
     var key = st.turnCount + "|" + (st.trade.seq || 0) + "|" + JSON.stringify(st.trade.give) + JSON.stringify(st.trade.get);
     if (ui.offerSeen === key) return;
     ui.offerSeen = key; openModal({ type: "offer" });
@@ -3930,6 +3990,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   var CPU_DELAY = { roll: 1000, jailCard: 1000, jailPay: 1000, buy: 1000, decline: 1000, bid: 600, pass: 500, build: 650, unmortgage: 650, mortgage: 650, sell: 650, payDebt: 900, bankrupt: 1500, endTurn: 800, acceptTrade: 1300, rejectTrade: 1300, proposeTrade: 1200 };
   function cpuBlocked() { return !st || ui.busy || FX.overlayOpen() || (ui.modal && /^(setup|confirm|trade|tprefs|savvy|abuild)$/.test(ui.modal.type)); }
   function scheduleCpu() {
+    if (ui.online) return; // online: the server plays the computers
     if (cpuTimer || cpuBlocked()) return;
     var a = AI.decide(st); if (!a) return;
     var ms = CPU_DELAY[a.type] || 800;
@@ -4028,6 +4089,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     if (u === "raise-done") {
       var rc = ui.modal.ctx; ui.modal = null; renderModal();
       if (rc === "buy") doAct({ type: "buy" });
+      else if (ui.online) doAct({ type: "payDebt" });
       else { var payer = st.debts[0].from, g2 = 0; while (st.phase === "debt" && st.debts[0].from === payer && st.players[payer].cash >= st.debts[0].amount && g2++ < 12) { if (!doAct({ type: "payDebt" })) break; } }
       return;
     }
@@ -4096,7 +4158,17 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     $("#title").textContent = "✈️ " + D.meta.title;
     $("#subtitle").textContent = D.meta.subtitle || "";
   }
-  window.TravelMonopolyUI = { getState: function () { return st; }, act: doAct, render: render, isAnimating: function () { return ui.busy; }, skip: skipAnimations, cpuPending: function () { return !!cpuTimer; } };
+  function netState(ns, evs) { // v11: show a state the server sent, animating its events like a local move
+    skipAnimations();
+    var first = !st, prev = st ? st.players.map(function (p) { return { pos: p.pos, inJail: p.inJail }; }) : null, wasOver = st && st.phase === "gameover";
+    st = ns; evs = evs || [];
+    if (ui.modal && ui.modal.type === "offer" && (!st.trade || st.trade.to !== ui.me)) { ui.modal = null; renderModal(); } // offer answered (here or elsewhere)
+    if (!first && !FX.isFast() && evs.length) return runAnimations(evs, prev).then(function () { celebrateIfOver(wasOver); });
+    evs.forEach(function (e) { if (e.type === "roll") FX.setDice(e.dice, false); }); if (!first) fastSounds(evs);
+    render(); celebrateIfOver(wasOver); return Promise.resolve();
+  }
+  function setOnline(o) { if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; } ui.online = o; ui.modal = null; renderModal(); st = null; built = false; render(); }
+  window.TravelMonopolyUI = { netState: netState, setOnline: setOnline, setMe: function (i) { ui.me = i; }, getState: function () { return st; }, act: doAct, render: render, isAnimating: function () { return ui.busy; }, skip: skipAnimations, cpuPending: function () { return !!cpuTimer; } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
 
@@ -7490,6 +7562,24 @@ html.phone body.p9 .overlay .modal > .ticket .p8glance b { line-height: 1.35 }
 html.phone body.p9 .overlay .modal > .ticket .nm { line-height: 1.35 !important }
 html.phone body.p9 .overlay .modal > .ticket .nm, html.phone body.p9 .overlay .modal > .ticket .p8glance { flex-shrink: 0 }
 
+/* v11 live online play: status bar, paused / vote banner, chip badges, recap popup (floating: never adds scroll) */
+#net11 { position: fixed; top: env(safe-area-inset-top); left: 50%; transform: translateX(-50%); z-index: 8000; display: flex; gap: 10px; align-items: center;
+  background: rgba(20, 49, 92, .92); color: #fff; font: 600 12px/1 system-ui, sans-serif; padding: 4px 10px; border-radius: 0 0 12px 12px; white-space: nowrap; pointer-events: none }
+#net11.in11, #net11.gut11 { transform: none; border-radius: 10px; padding: 3px 7px; gap: 6px; font-size: 11px; z-index: 20; max-width: calc(100vw - 110px) }
+#net11.gut11 { flex-direction: column; align-items: flex-start; white-space: normal; line-height: 1.25 }
+#net11.in11 .me11:empty { display: none }
+#net11 .c11 { color: #ffc93c; letter-spacing: 1px } #net11 .tm11 { background: #ffc93c; color: #14315c; border-radius: 8px; padding: 2px 6px }
+#ban11 { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 8001; font: 15px/1.3 system-ui, sans-serif; color: #14315c }
+#ban11 .away11 { background: #fff7d6; border: 2px solid #ffc93c; border-radius: 12px; padding: 8px 12px; text-align: center; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.25) }
+#ban11 .vote11 { background: #fbf6ea; border: 3px solid #14315c; border-radius: 16px; padding: 10px 12px; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,.35) }
+#ban11 .row11 { display: flex; gap: 8px; margin: 8px 0 4px } #ban11 .row11 button { flex: 1; min-height: 46px; font: 700 17px system-ui, sans-serif; border-radius: 12px; border: 2px solid #14315c; background: #fff; color: #14315c }
+#ban11 .row11 button.on { background: #14315c; color: #fff } #ban11 small { opacity: .75 }
+.pcard .dc11 { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; background: #fff7d6; border: 1px solid #ffc93c; border-radius: 8px; padding: 1px 5px; color: #14315c }
+#pop11 { position: fixed; inset: 0; z-index: 8500; background: rgba(10, 20, 40, .55); display: flex; align-items: center; justify-content: center; padding: 16px }
+#pop11 .box11 { background: #fbf6ea; color: #14315c; border-radius: 18px; padding: 14px 16px; max-width: 440px; width: 100%; font: 14px/1.35 system-ui, sans-serif; max-height: 90vh; overflow: hidden }
+#pop11 h3 { margin: 0 0 6px; font-size: 19px } #pop11 ul { margin: 0 0 8px; padding-left: 18px } #pop11 li { margin: 2px 0 }
+#pop11 button { width: 100%; min-height: 46px; margin-top: 8px; border: 0; border-radius: 12px; background: #14315c; color: #fff; font: 700 17px system-ui, sans-serif }
+
 </style>
 <script id="online-net">
 /* ===================== v9 online: tiny client for server/server.js (stage 1: not wired into the UI yet) =====================
@@ -7532,6 +7622,7 @@ var Net9 = (function () {
       sendAction: function (a) { raw({ t: "action", action: a }); },
       vote: function (choice) { raw({ t: "vote", choice: choice }); },
       recap: function (from) { raw({ t: "log", from: from || 0 }); },
+      isOpen: function () { return !!ws && ws.readyState === 1; },
       me: function () { return me; }, forget: function () { me = null; var s = store(); if (s) try { s.removeItem(KEY); } catch (e) {} },
       close: function () { closed = true; if (ws) ws.close(); },
       drop: function () { if (ws) ws.close(); } // test helper: simulate lost signal (auto-reconnects unless reconnect:false)
@@ -7563,8 +7654,108 @@ if (typeof module !== "undefined") module.exports = Net9;
 })();
 
 </script>
+<script id="online-play">
+/* ===================== v11 stage 3: live online play =====================
+   Feeds server state into the real v9 board (TravelMonopolyUI.netState) and replays the server's animation events.
+   Only the seat whose turn it is gets controls (actionPanel asks Online11.panel); everyone else sees "Waiting for …".
+   Paused-player banner + countdown on their chip, Wait/Computer vote, "While you were away" recap, timed-game clock. */
+var Online11 = (function () {
+  var UI = null, E = Engine, net = null, me = -1, last = null, queue = [], playing = false, tick = null, code = "";
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var bar = document.createElement("div"); bar.id = "net11"; bar.style.display = "none"; document.body.appendChild(bar);
+  var pop = document.createElement("div"); pop.id = "pop11"; pop.style.display = "none"; document.body.appendChild(pop);
+  function mmss(ms) { ms = Math.max(0, ms); var s = Math.ceil(ms / 1000), m = Math.floor(s / 60); return m + ":" + ("0" + (s % 60)).slice(-2); }
+  function toast(t) { var el = document.getElementById("toast"); if (!el) return; el.textContent = t; el.style.display = "block"; el.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(function () { el.style.opacity = 0; el.style.display = "none"; }, 2800); }
+  function seat(i) { return last && last.seats && last.seats[i]; }
+  function pump() { // play server states one at a time so each move animates; fast-forward if we fall behind
+    if (playing || !queue.length) return;
+    var m = queue.shift(); if (queue.length > 2) m.events = [];
+    last = m; if (m.you !== undefined) me = m.you; UI.setMe(me); playing = true;
+    Promise.resolve(UI.netState(m.state, m.events || [])).then(done, done);
+    function done() { playing = false; decorate(); pump(); }
+    decorate();
+  }
+  function panel(st) { // null = let the normal v9 panel draw (my turn, or a computer's)
+    if (!last || st.phase === "gameover") return null;
+    var a = E.actor(st), s = seat(a), P = st.players[a];
+    if (a === me) return null;
+    if (s && s.computer) return null;
+    var h = "";
+    if (s && !s.connected) h += "<h3>📵 " + P.token + " " + esc(P.name) + " is disconnected</h3><div class='hint'>Their turn is paused" + (s.timerEndsAt ? ": " + (last.vote ? "vote below" : "waiting " + mmss(s.timerEndsAt - Date.now())) : "") + ".</div>";
+    else if (st.trade) h += "<h3>🤝 Waiting for " + P.token + " " + esc(P.name) + "</h3><div class='hint'>" + (st.trade.from === me ? "They're looking at your offer." : "They're answering " + esc(st.players[st.trade.from].name) + "'s trade offer.") + "</div>";
+    else {
+      var what = { roll: "rolling", buy: "deciding whether to buy", auction: "bidding in the auction", debt: "sorting out a payment", end: "finishing their turn", freemove: "choosing a free move" }[st.phase] || "playing";
+      h += "<h3>⏳ " + P.token + " " + esc(P.name) + " is " + what + "</h3><div class='hint'>You'll get your controls when it's your turn.</div>";
+      if (st.phase === "auction" && st.auction) h += "<div class='hint'>High bid: " + (st.auction.highBidder !== null ? E.money(st.auction.high) + " by " + esc(st.players[st.auction.highBidder].name) : "none yet") + "</div>";
+    }
+    return h;
+  }
+  function placeBar() {
+    var v = document.querySelector(".view3d"); if (!v || !v.offsetParent) { bar.className = ""; bar.style.left = bar.style.top = bar.style.width = ""; return; }
+    var r = v.getBoundingClientRect();
+    if (r.left >= 84) { bar.className = "gut11"; bar.style.width = (r.left - 8) + "px"; bar.style.left = "4px"; bar.style.top = (r.top + 4) + "px"; }
+    else { bar.className = "in11"; bar.style.width = ""; bar.style.left = (r.left + 6) + "px"; bar.style.top = (r.top + 6) + "px"; }
+  }
+  addEventListener("resize", function () { if (last) placeBar(); });
+  function decorate() { // status bar, paused/vote banner, countdown badge on the disconnected player's chip
+    if (!last) return;
+    var st = last.state, now = Date.now(), h = '<span class="c11">🌐 ' + esc(code) + "</span>";
+    if (st.opts && st.opts.endsAt && st.phase !== "gameover") h += '<span class="tm11">⏱️ ' + mmss(st.opts.endsAt - now) + " left</span>";
+    var host = (last.seats || []).filter(function (x) { return x.host; })[0];
+    h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
+    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; placeBar();
+    var v = last.vote, b = "";
+    if (v && v.seat !== me) {
+      var who = st.players[v.seat], mine = v.votes && v.votes[me];
+      b = '<div class="vote11"><b>📵 ' + who.token + " " + esc(who.name) + " is still away.</b><div>Wait longer, or let a computer play for them?</div>" +
+        '<div class="row11"><button data-v11="wait"' + (mine === "wait" ? ' class="on"' : "") + '>⏳ Wait</button><button data-v11="computer"' + (mine === "computer" ? ' class="on"' : "") + ">🤖 Computer</button></div>" +
+        '<small>Majority decides; a tie goes to the host. ' + Object.keys(v.votes || {}).length + " voted.</small></div>";
+    } else (last.seats || []).forEach(function (x) {
+      if (!x.connected && !x.computer && x.seat !== me && st.players[x.seat] && !st.players[x.seat].bankrupt) b = b || '<div class="away11">📵 ' + esc(x.name) + " disconnected" + (x.timerEndsAt ? " · " + (last.settings && last.settings.disconnect && last.settings.disconnect.mode === "auto" ? "computer takes over in " : "vote in ") + mmss(x.timerEndsAt - now) : "") + "</div>";
+    });
+    var bn = document.getElementById("ban11"); if (!bn) { bn = document.createElement("div"); bn.id = "ban11"; document.body.appendChild(bn); }
+    if (bn.innerHTML !== b) bn.innerHTML = b; bn.style.display = b ? "" : "none";
+    (last.seats || []).forEach(function (x) {
+      var pc = document.querySelector('.pcard[data-pid="' + x.seat + '"]'); if (!pc) return;
+      var tag = pc.querySelector(".dc11"), t = x.computer ? "🤖 computer" : !x.connected ? "📵 " + (x.timerEndsAt ? mmss(x.timerEndsAt - now) : "away") : "";
+      if (!t) { if (tag) tag.remove(); return; }
+      if (!tag) { tag = document.createElement("span"); tag.className = "dc11"; pc.appendChild(tag); } tag.textContent = t;
+    });
+  }
+  function recap(m) {
+    var lines = (m.lines || []).slice(-9); if (!lines.length) return;
+    pop.innerHTML = '<div class="box11"><h3>👋 While you were away' + (m.awayMs ? " (" + mmss(m.awayMs) + ")" : "") + "</h3><ul>" + lines.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul>" +
+      ((m.lines || []).length > 9 ? "<small>…and " + ((m.lines.length) - 9) + " earlier lines in the log.</small>" : "") + '<button data-v11="ok">Back to the game</button></div>';
+    pop.style.display = "";
+  }
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-v11]"); if (!b) { var ng = UI && last && ev.target.closest('[data-ui="newgame"]'); if (ng) { ev.stopPropagation(); ev.preventDefault(); if (confirm("Leave the online game?")) { net.forget(); location.href = location.pathname; } } return; }
+    var v = b.dataset.v11;
+    if (v === "ok") pop.style.display = "none"; else if (v === "wait" || v === "computer") net.vote(v);
+  }, true);
+  function start(n, room, first) { // called by the lobby once the game starts (or on rejoin)
+    if (net) return; net = n; code = room.code || ""; UI = window.TravelMonopolyUI;
+    if (typeof ThemeKit !== "undefined") { var r = ThemeKit.apply(room.theme || ThemeKit.defaults()); if (r.errors && r.errors.length) toast("Board problem: " + r.errors[0]); }
+    UI.setOnline({ send: function (a) { net.sendAction(a); }, panel: panel });
+    document.documentElement.classList.add("net11-on");
+    net.on("state", function (m) { queue.push(m); pump(); });
+    net.on("recap", recap);
+    net.on("error", function (m) { if (m.action) toast(m.msg); });
+    net.on("event", function (e) {
+      if (!last) return; var nm = function (i) { return last.state.players[i] ? last.state.players[i].name : "?"; };
+      var msg = { disconnect: "📵 " + nm(e.seat) + " lost connection", reconnect: "📶 " + nm(e.seat) + " is back", computerTakeover: "🤖 A computer is playing for " + nm(e.seat), hostChanged: "👑 " + e.name + " is now the host", voteResult: e.result === "wait" ? "⏳ Waiting longer for " + nm(e.seat) : null, timeUp: "⏰ Time's up!" }[e.kind];
+      if (msg) toast(msg); if (e.kind === "hostChanged" && last.seats) last.seats.forEach(function (x) { x.host = x.seat === e.seat; }); decorate();
+    });
+    if (first) { queue.push(first); pump(); }
+    tick = setInterval(decorate, 1000);
+  }
+  return { start: start, panel: panel, active: function () { return !!net; }, last: function () { return last; } };
+})();
+
+</script>
 <script id="online-lobby">
-/* ===================== v10 stage 2: Play online (home choice, create / join, lobby, rules + agree) =====================
+/* ===================== v11 (v10 lobby + hand-off to live play in online11.js; host can change hands) =====================
+   v10 stage 2: Play online (home choice, create / join, lobby, rules + agree) =====================
    Full-screen overlay on top of the v9 game; "Pass & play" just closes it. Talks to server/server.js through Net9.
    Server: wss://travel-monopoly-server.onrender.com (override with ?server=ws://host:port). Deep link: ?room=CODE */
 (function () {
@@ -7592,21 +7783,22 @@ if (typeof module !== "undefined") module.exports = Net9;
     net.on("open", function () { S.open = true; S.waking = false; clearTimeout(wakeT); if (S.view === "join" && S.code.length === 4) net.peek(S.code); draw(); });
     net.on("close", function () { S.open = false; if (S.view === "lobby" || S.view === "rules" || S.view === "game") { S.waking = true; draw(); } });
     net.on("error", function (m) { S.err = m.msg; S.busy = false; draw(); });
+    net.on("event", function (e) { if (e.kind === "hostChanged" && S.room) { S.room.seats.forEach(function (x, i) { x.host = i === e.seat; }); if (e.seat === S.you) flash("👑 You are now the host"); draw(); } });
     net.on("joined", function (m) { S.you = m.seat; S.code = m.code; S.busy = false; S.err = ""; if (S.view !== "rules") S.view = "lobby"; history.replaceState(null, "", location.pathname + "?room=" + m.code + (Q.get("server") ? "&server=" + encodeURIComponent(Q.get("server")) : "")); draw(); });
     net.on("room", function (m) {
       S.room = m; if (m.you !== undefined) S.you = m.you;
       if (m.settingsChanged && S.you !== 0) flash("The host changed the rules: please check and Agree again");
-      if (m.phase === "playing" && S.view !== "game") S.view = "game";
+      if (m.phase === "playing" && S.view !== "off") S.view = "game";
       draw();
     });
     net.on("peek", function (m) { S.peek = m; draw(); });
-    net.on("state", function (m) { S.state = m; if (m.you !== undefined) S.you = m.you; if (m.seats && S.room) S.room.seats = m.seats; S.view = "game"; draw(); });
+    net.on("state", function (m) { S.state = m; if (m.you !== undefined) S.you = m.you; if (S.view !== "off") { S.view = "off"; draw(); Online11.start(net, { code: m.code, theme: S.room ? S.room.theme : null }, m); } });
     net.on("closed", function (m) { S.room = null; S.view = "home"; S.err = m.msg; draw(); });
     net.on("left", function () { S.room = null; S.view = "home"; draw(); });
     return net;
   }
   function flash(t) { S.toast = t; draw(); setTimeout(function () { if (S.toast === t) { S.toast = ""; draw(); } }, 3500); }
-  function amHost() { return S.you === 0; }
+  function amHost() { var s = S.room && S.room.seats[S.you]; return s ? !!s.host : S.you === 0; }
   function settings() { return S.room ? S.room.settings : J(DEF); }
 
   /* ---------- views ---------- */
