@@ -7400,6 +7400,47 @@ html.phone body.p9 .overlay .modal .tr101 h2 { margin: 0; font-size: 19px }
   .tr101 .tr-tabs button { min-height: 44px } .tr101 .tr-tabs small { font-size: 12px }
 }
 
+/* v10.2 turn-panel fit levels (body.fitN set by fit102.js only when the panel would clip). Fonts stay >= 15px, buttons >= 44px. */
+html.phone body.p9.fit1 #sheetTurn .center .hint { display: none }
+html.phone body.p9.fit1 #sheetTurn .center .panel { padding-top: 4px; padding-bottom: 4px }
+html.phone body.p9.fit1 #sheetTurn .center h3 { margin: 0 0 2px; font-size: 17px; line-height: 1.2 }
+html.phone body.p9.fit2 #sheetTurn .center .p8src { display: none } /* the sticky bar already shows these */
+html.phone body.p9.fit2 #sheetTurn .center .panel { font-size: 15px; line-height: 1.2 }
+html.phone body.p9.fit2 #sheetTurn .center .panel > div, html.phone body.p9.fit2 #sheetTurn .center .row { margin-top: 2px; margin-bottom: 2px }
+html.phone body.p9.fit2 #sheetTurn .center h3 { font-size: 16px }
+html.phone body.p9.fit3 #sheetTurn .center .turnrow, html.phone body.p9.fit3 #sheetTurn .center .cardview, html.phone body.p9.fit3 #sheetTurn .center .deco { display: none }
+html.phone body.p9.fit3 #sheetTurn .center .row:not(:has(button:not(.p8src), select, input)) { display: none }
+html.phone body.p9.fit4 #sheetTurn .center .panel > div:not(.row):not(:has(input, select, button)) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html.phone body.p9.fit4 #sheetTurn .center h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html.phone body.p9.fit4 #sheetTurn .center .panel { display: flex; flex-wrap: wrap; column-gap: 6px; align-items: center; align-content: flex-start }
+html.phone body.p9.fit4 #sheetTurn .center .panel > * { flex: 0 0 100%; min-width: 0 }
+html.phone body.p9.fit4 #sheetTurn .center .panel > .row { flex: 0 0 auto; flex-wrap: nowrap; max-width: 100% }
+html.phone body.p9.fit4 #sheetTurn .center [data-bidplus="1"], html.phone body.p9.fit4 #sheetTurn .center [data-bidplus="100"] { display: none }
+/* v10.2 sheets: property chips in a 2-col grid (ellipsis) so an 11-property player sheet fits short phones */
+html.phone body.p9 #p9sheet .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px }
+html.phone body.p9 #p9sheet .chip { display: block; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 44px; min-height: 44px; padding: 0 8px }
+/* large system text: never clip the cash numbers or tab labels */
+html.phone body.p9 #p8strip .p8p .cs { line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html.phone body.p9 #phoneTabs button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+/* very short screens (iPhone SE Safari 375x548): compact the menu and the editor forms */
+@media (max-height: 600px) {
+  html.phone body.p9 #phoneMenu .pmhint { display: none }
+  html.phone body.p9 #phoneMenu .pmsec button:not(#muteBtn) { flex: 1 1 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; min-height: 48px }
+  #edz .edhint { display: none }
+  #edz .edrent div { grid-template-columns: repeat(6, minmax(0, 1fr)) }
+  #edz .edbtns { margin: 4px 0 }
+  #edz .edbtns button, #edz .btnlike { min-height: 46px }
+}
+html.phone body.p9.fit4 #sheetTurn .center .panel > div:not(.row) { line-height: 1.15 }
+html.phone body.p9.fit4 #sheetTurn .center .panel > div:not(.row) b { font-size: inherit; line-height: inherit }
+/* very short screens: trade chips in 3 columns; property glance values keep a full line box (emoji owners) */
+@media (max-height: 600px) {
+  html.phone body.p9 .overlay .modal .tr101 .tr-chips { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+}
+html.phone body.p9 .overlay .modal > .ticket .p8glance b { line-height: 1.35 }
+html.phone body.p9 .overlay .modal > .ticket .nm { line-height: 1.35 !important }
+html.phone body.p9 .overlay .modal > .ticket .nm, html.phone body.p9 .overlay .modal > .ticket .p8glance { flex-shrink: 0 }
+
 </style>
 <script id="online-net">
 /* ===================== v9 online: tiny client for server/server.js (stage 1: not wired into the UI yet) =====================
@@ -7451,6 +7492,26 @@ var Net9 = (function () {
   return { connect: connect, KEY: KEY };
 })();
 if (typeof module !== "undefined") module.exports = Net9;
+
+</script>
+<script id="panel-fit">
+/* v10.2: keep the turn panel under the board on screen at any phone height / text size, without touching the board.
+   When #sheetTurn's panel overflows, step up body.fit1 .. fit4 (each level is more compact; see fit102.css) until it fits. */
+(function () {
+  var LV = 4, busy = false, raf = 0;
+  function box() { return document.querySelector("#sheetTurn > .center"); }
+  function over(c) { return c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1; }
+  function fit() {
+    raf = 0; var c = box(), b = document.body; if (!c || busy) return; busy = true;
+    for (var i = 1; i <= LV; i++) b.classList.remove("fit" + i);
+    for (var k = 1; k <= LV && over(c); k++) b.classList.add("fit" + k);
+    busy = false;
+  }
+  function q() { if (!raf && !busy) raf = requestAnimationFrame(fit); }
+  new MutationObserver(function (l) { if (!busy && l.some(function (m) { return !(m.type === "attributes" && m.target === document.body); })) q(); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "style"] });
+  addEventListener("resize", q); q();
+})();
 
 </script>
 <script id="online-lobby">
