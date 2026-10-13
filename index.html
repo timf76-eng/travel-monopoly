@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="tm-version" content="v10.3">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3383,7 +3384,8 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
           ui.disp[e.pid] = { pos: e.from, inJail: ui.disp[e.pid].inJail && e.dir !== 0 ? false : ui.disp[e.pid].inJail };
           layoutTokens();
           var pts = path.map(function (q, i) { return slotPoint(q, i === path.length - 1 && e.jail, 0, 1); });
-          return FX.slide(el, pts, e.dir === 0, function () { SFX.step(); }).then(function () { if (!ui.disp) return; ui.disp[e.pid] = { pos: e.to, inJail: !!e.jail }; layoutTokens(); SFX.forLanding(sp(e.to).type, e.jail); });
+          try { if (window.TM103) TM103.move(e, path); } catch (x) {}
+          return FX.slide(el, pts, e.dir === 0, function () { SFX.step(); }).then(function () { if (!ui.disp) return; ui.disp[e.pid] = { pos: e.to, inJail: !!e.jail }; layoutTokens(); SFX.forLanding(sp(e.to).type, e.jail); try { if (window.TM103) TM103.land(e); } catch (x) {} });
         }
         if (e.type === "card") {
           var dk = D.decks[e.deck], cls = e.deck === "chest" ? "souvenir" : "";
@@ -5433,7 +5435,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   var bar = document.createElement("div"); bar.className = "b3d-bar";
   bar.innerHTML = '<button data-v3="reset" title="Back to the starting view">⟲ Reset view</button><button data-v3="top" title="Look straight down">⬇ Top-down</button>' +
     '<button data-v3="tilt" title="Tilted view (about 50°)">◢ Tilted</button><button data-v3="panel" title="Hide or show the turn panel">▣ Hide panel</button>' +
-    '<button data-v3="follow" title="Gently pan to the moving token, then return to your view">🎯 Follow token: Off</button>';
+    '<button data-v3="follow" title="Zoom in and follow the moving token, then return to the whole board">🎯 Auto-zoom: On</button>';
   wrap.appendChild(bar);
   var help = document.createElement("div"); help.className = "b3d-help";
   help.textContent = PHONE_DEV ? "One finger rotates · pinch to zoom · two fingers pan · tap a space for details" : "Drag to rotate · scroll or pinch to zoom · right-drag to pan · click a space for details";
@@ -5641,6 +5643,12 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       var blockH = fit.lines.length * fit.px * 1.1 + (price ? prH * 1.15 : 0), y0 = ty + (th - blockH) / 2 + fit.px * .55;
       fit.lines.forEach(function (l, i) { c.fillText(l, bx + bw / 2, y0 + i * fit.px * 1.1); });
       if (price) { c.font = "800 " + prH + "px " + SANS; c.fillText(price, bx + bw / 2, y0 + fit.lines.length * fit.px * 1.1 + prH * .5); }
+    }
+    if (o && st.players[o.owner]) { // v10.3: thin owner-colour strip along the outer edge; mortgaged lots get diagonal hatching
+      var sc = PCOLORS[o.owner], SW = Math.round(Math.min(W, H) * .07); c.fillStyle = sc;
+      if (r.side === "side-bottom") c.fillRect(0, H - SW, W, SW); else if (r.side === "side-top") c.fillRect(0, 0, W, SW);
+      else if (r.side === "side-left") c.fillRect(0, 0, SW, H); else if (r.side === "side-right") c.fillRect(W - SW, 0, SW, H);
+      if (mort) { c.save(); c.strokeStyle = "rgba(60,60,60,.32)"; c.lineWidth = 5; c.beginPath(); for (var hx = -H; hx < W; hx += 22) { c.moveTo(hx, H); c.lineTo(hx + H, 0); } c.stroke(); c.restore(); }
     }
     if (o && st.players[o.owner]) { // owner tag, like the 2D board
       var op = st.players[o.owner], R = Math.round(Math.min(W, H) * .14), ox = W - R - 6, oy = R + 6;
@@ -6054,7 +6062,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     d.fade = { start: now, mats: [] };
     d.group.traverse(function (o) { if (o.isMesh) { var m = o.material.clone(); m.transparent = true; o.material = m; d.fade.mats.push(m); o.castShadow = false; } });
   }
-  var mover = null; // the token currently hopping (for camera follow)
+  var mover = null, ringTurn = -1, ringT0 = 0; // the token currently hopping (for camera follow)
   function syncTokens(st, dt, now) {
     var anim = false, targets = st ? tokenTargets(st) : {}, active = null;
     mover = null;
@@ -6111,7 +6119,13 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       if (p.id === st.turn && st.phase !== "gameover") active = d;
     });
     ring.visible = !!active;
-    if (active) ring.position.set(active.cur.x, TILE_TOP + 0.03, active.cur.z);
+    if (active) {
+      ring.position.set(active.cur.x, TILE_TOP + 0.03, active.cur.z);
+      if (ringTurn !== st.turn) { ringTurn = st.turn; ringT0 = now; }
+      var rk = (now - ringT0) / 3000;
+      if (rk < 1) { var pu = Math.abs(Math.sin(rk * Math.PI * 4)); ring.scale.setScalar(1 + .25 * pu); ring.material.emissive.setRGB(.48 + .4 * pu, .35 + .3 * pu, 0); anim = true; }
+      else if (ring.scale.x !== 1) { ring.scale.setScalar(1); ring.material.emissive.set("#7a5a00"); }
+    }
     if (anim) dirty = true;
     return anim;
   }
@@ -6616,23 +6630,47 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     dirty = true;
   });
   controls.addEventListener("start", function () { camTween = null; follow = null; userDrag = true; }); // the user takes over: no auto-return
-  controls.addEventListener("end", function () { userDrag = false; });
+  controls.addEventListener("end", function () { userDrag = false; zoomCheck(); });
+
+  /* ---------- v10.3: board zoom. ~2x closer, one finger pans while zoomed, reset snaps back to the full board ---------- */
+  var zoomed = false;
+  function resetDist() { var v = viewFor("reset"); return v.pos.distanceTo(v.target); }
+  function setPanMode(on) {
+    controls.touches.ONE = on ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE; controls.mouseButtons.LEFT = on ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+    controls.panSpeed = on ? 1.4 : 1;
+  }
+  function setZoomed(on) { if (zoomed === on) return; zoomed = on; setPanMode(on); if (window.TM103) TM103.zoomChanged(on); }
+  function zoomCheck() { if (camTween) return; var d = camera.position.distanceTo(controls.target), rd = resetDist(); if (!zoomed && d < rd * .8) setZoomed(true); else if (zoomed && d > rd * .92) setZoomed(false); }
+  function groundAt(cx, cy) {
+    var rc = canvas.getBoundingClientRect(); ndc.set((cx - rc.left) / rc.width * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+    var p = new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p) ? p : new THREE.Vector3(0, 0, 0);
+  }
+  function zoomView(pt, k) { // keep the reset view's angle, come ~2x closer, centre on pt
+    var v = viewFor("reset"), sph = new THREE.Spherical().setFromVector3(v.pos.clone().sub(v.target)), lim = 5;
+    var t = new THREE.Vector3(Math.max(-lim, Math.min(lim, pt.x)), 0, Math.max(-lim, Math.min(lim, pt.z)));
+    return { pos: new THREE.Vector3().setFromSphericalCoords(sph.radius / (k || 2), sph.phi, sph.theta).add(t), target: t };
+  }
+  function zoomTo(pt) { var v = zoomView(pt); follow = null; camTween = { from: camera.position.clone(), fromT: controls.target.clone(), to: v.pos, toT: v.target, start: performance.now(), ms: 450 }; setZoomed(true); }
+  function zoomReset() { follow = null; setZoomed(false); goView("reset"); }
+  function tokenPt(pid) { var d = discs[pid]; return d && d.cur ? new THREE.Vector3(d.cur.x, 0, d.cur.z) : new THREE.Vector3(0, 0, 0); }
 
   /* ---------- optional camera follow (toolbar toggle, default off) ---------- */
-  var FOLLOW_KEY = "timTravelMonopoly.follow3d", followOn = false, follow = null, userDrag = false;
-  try { followOn = localStorage.getItem(FOLLOW_KEY) === "1"; } catch (e) {}
+  var FOLLOW_KEY = "timTravelMonopoly.follow103", followOn = true, follow = null, userDrag = false; // v10.3: auto-zoom follow, default on
+  try { followOn = localStorage.getItem(FOLLOW_KEY) !== "0"; } catch (e) {}
   function setFollow(on) {
     followOn = on; try { localStorage.setItem(FOLLOW_KEY, on ? "1" : "0"); } catch (e) {}
-    var b = bar.querySelector('[data-v3="follow"]'); if (b) { b.textContent = "🎯 Follow token: " + (on ? "On" : "Off"); b.classList.toggle("on", on); }
+    var b = bar.querySelector('[data-v3="follow"]'); if (b) { b.textContent = "🎯 Auto-zoom: " + (on ? "On" : "Off"); b.classList.toggle("on", on); }
   }
   function runFollow(now, dt) {
     if (!followOn) { follow = null; return false; }
     if (mover && mover.cur && !userDrag) {
       if (!follow) follow = { pos: camera.position.clone(), target: controls.target.clone() };
       follow.last = now; camTween = null;
-      var want = new THREE.Vector3(mover.cur.x * .8, 0, mover.cur.z * .8), a = 1 - Math.pow(0.08, dt);
+      var want = new THREE.Vector3(mover.cur.x * .9, 0, mover.cur.z * .9), a = 1 - Math.pow(0.08, dt);
       var delta = want.sub(controls.target).multiplyScalar(a); delta.y = 0;
-      controls.target.add(delta); camera.position.add(delta); dirty = true; return true;
+      controls.target.add(delta); camera.position.add(delta);
+      if (!zoomed) { var off = camera.position.clone().sub(controls.target), L = off.length(), want2 = resetDist() / 1.9; if (L > want2) { off.setLength(L + (want2 - L) * a); camera.position.copy(controls.target).add(off); } }
+      dirty = true; return true;
     }
     if (follow && (now - follow.last > 1600 || (now - follow.last > 500 && !(UI() && UI().isAnimating())))) {
       camTween = { from: camera.position.clone(), fromT: controls.target.clone(), to: follow.pos, toT: follow.target, start: now, ms: 800 };
@@ -6645,6 +6683,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     var k = b.dataset.v3;
     if (k === "follow") { setFollow(!followOn); return; }
     if (k === "panel") { var off = document.body.classList.toggle("b3d-nopanel"); b.textContent = off ? "▣ Show panel" : "▣ Hide panel"; return; }
+    if (k === "reset") setZoomed(false);
     goView(k);
   });
 
@@ -6676,10 +6715,18 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     var d = down; down = null; if (wasMulti) return;
     if (!d || d.b !== 0 || Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 6) return; // that was a drag
     var u = UI(); if (u && u.isAnimating()) { u.skip(); return; } // same as clicking the 2D board mid-move
-    var pos = pick(ev); if (pos == null) return;
-    var cell = board.querySelector('.cell[data-pos="' + pos + '"]');
-    if (cell) cell.click(); // ui.js opens the same deed / info card as the 2D board
+    var pos = pick(ev), now = performance.now();
+    if (lastTap && now - lastTap.t < 320 && Math.abs(ev.clientX - lastTap.x) + Math.abs(ev.clientY - lastTap.y) < 40) { // v10.3 double-tap: zoom in there / back out
+      clearTimeout(lastTap.timer); lastTap = null; if (zoomed) zoomReset(); else zoomTo(groundAt(ev.clientX, ev.clientY)); return;
+    }
+    if (lastTap) clearTimeout(lastTap.timer);
+    lastTap = { t: now, x: ev.clientX, y: ev.clientY, timer: setTimeout(function () {
+      lastTap = null; if (pos == null) return;
+      var cell = board.querySelector('.cell[data-pos="' + pos + '"]');
+      if (cell) cell.click(); // ui.js opens the same deed / info card as the 2D board
+    }, 300) };
   });
+  var lastTap = null;
 
   /* ---------- size ---------- */
   function resize() {
@@ -6743,7 +6790,9 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   goView("reset", true);
   setActive(pref3d());
   requestAnimationFrame(loop);
-  window.TravelMonopoly3D = { focus: focusView, setActive: setActive, phoneDevice: PHONE_DEV, pixelRatioCap: PR_CAP, shadowMapSize: SHADOW, _controls: controls,
+  window.TravelMonopoly3D = { zoomTo: function (pid) { zoomTo(tokenPt(pid)); }, zoomAt: function (x, y) { zoomTo(groundAt(x, y)); }, zoomReset: zoomReset, isZoomed: function () { return zoomed; }, setFollow: setFollow, followOn: function () { return followOn; },
+    flash: function (pos, color, ms, pulses, amp) { var t = tiles[pos]; if (!t || !active) return; t.flash = { color: new THREE.Color(color || "#ffd54a"), start: performance.now(), ms: ms || 1200, pulses: pulses || 2, amp: amp || .55 }; dirty = true; },
+    focus: focusView, setActive: setActive, phoneDevice: PHONE_DEV, pixelRatioCap: PR_CAP, shadowMapSize: SHADOW, _controls: controls,
     _fpsSim: function (fps) { fpsSince = -1e9; fpsPrev = 0; fpsT = fpsN = 0; var t = performance.now(); for (var i = 0; i < 400 && active; i++) fpsGuard(t + i * 1000 / fps, true); return active; }, isActive: function () { return active; }, view: goView, renderer: renderer, _discs: discs, _diceTop: function () { var N = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]; return dice.map(function (d) { var best = -2, v = 0; N.forEach(function (n, i) { var w = new THREE.Vector3(n[0], n[1], n[2]).applyQuaternion(d.mesh.quaternion); if (w.y > best) { best = w.y; v = FACE_VALS[i]; } }); return v; }); },
     _cam: function (p, t) { camera.position.set(p[0], p[1], p[2]); controls.target.set(t[0], t[1], t[2]); controls.update(); dirty = true; },
     _bld: function (pos) { var t = tiles[pos], b = t.bld || { houses: [], hotel: null }; return { houses: b.houses.length, hotel: !!b.hotel, mort: !!t.mort, dim: t.mat.color.r < 1 }; },
@@ -6959,7 +7008,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   var menu = document.createElement("div"); menu.id = "phoneMenu";
   menu.innerHTML = '<div class="pmsec" data-sec="sound"><h5>Sound</h5></div><div class="pmsec" data-sec="board"><h5>Board</h5></div>' +
     '<div class="pmsec" data-sec="game"><h5>Game</h5></div>' +
-    '<div class="pmsec"><span class="pmhint">3D board: one finger rotates · pinch zooms · two fingers pan · tap a space for its card. Tap the board during a move to skip it.</span></div>';
+    '<div class="pmsec"><span class="pmhint">3D board: one finger rotates · pinch zooms · two fingers pan · tap a space for its card. 🔍 or double-tap zooms in (then one finger pans), ⤢ shows the whole board. Tap the board during a move to skip it.</span></div>';
   var followBtn = document.createElement("button"); followBtn.id = "phoneFollowBtn";
   aside.insertBefore(tabs, aside.firstChild); aside.insertBefore(sheetTurn, tabs); aside.appendChild(menu);
   function setTab(t) {
@@ -7701,6 +7750,175 @@ if (typeof module !== "undefined") module.exports = Net9;
   else if (S.view === "join") connect();
   draw();
   window.Lobby10 = { state: S, show: function () { S.view = "home"; draw(); } };
+})();
+
+</script>
+<style id="v103-css">
+/* v10.3 overlays: all absolutely positioned inside .view3d, so the board keeps its size */
+html,body{touch-action:manipulation}
+.view3d{overflow:hidden;touch-action:none}
+.board.z103anim{transition:transform .35s ease}
+.z103{position:absolute;right:6px;top:6px;z-index:8;display:flex;gap:6px}
+.z103 button{width:40px;height:40px;min-height:0;padding:0;border-radius:50%;font-size:19px;line-height:1;background:rgba(255,250,235,.92);border:1.5px solid rgba(20,49,92,.45);box-shadow:0 2px 6px rgba(0,0,0,.25);color:#14315c}
+.z103 [data-z=reset]{display:none}
+.zoomed103 .z103 [data-z=reset]{display:block;background:#ffd54a}
+.zoomed103 .z103 [data-z=in]{display:none}
+.ban103{position:fixed;left:50%;top:50%;z-index:32;transform:translate(-50%,0) scale(.9);width:max-content;max-width:84%;padding:9px 14px;border-radius:12px;background:rgba(20,49,92,.94);color:#fff;
+  font-weight:800;font-size:16px;line-height:1.25;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;
+}
+.ban103.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.tick103{position:fixed;left:6px;top:0;z-index:30;line-height:1.6;padding:0 8px;border-radius:10px;background:rgba(255,250,235,.88);color:#2b1d0a;
+  font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+body:not(.b3d) .tick103{background:rgba(255,250,235,.95)}
+/* 2D board: trail, landing pulse, owner strip, mortgaged hatching */
+.cell.trail103{animation:tr103 .7s ease-out}
+@keyframes tr103{0%{box-shadow:inset 0 0 0 40px rgba(255,236,140,.75)}100%{box-shadow:inset 0 0 0 40px rgba(255,236,140,0)}}
+.cell.land103{animation:ld103 .55s ease-in-out 3;z-index:4}
+@keyframes ld103{50%{box-shadow:0 0 0 3px var(--fl),0 0 12px 4px var(--fl)}}
+.cell.own103.side-bottom{border-bottom:4px solid var(--own)}
+.cell.own103.side-top{border-top:4px solid var(--own)}
+.cell.own103.side-left{border-left:4px solid var(--own)}
+.cell.own103.side-right{border-right:4px solid var(--own)}
+.cell.mortgaged{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.10) 0 3px,transparent 3px 8px)}
+/* current turn: the active player's card glows gently */
+.pcard.turn{animation:turn103 1.8s ease-in-out infinite}
+@keyframes turn103{50%{box-shadow:0 0 0 3px var(--gold),0 0 12px 3px rgba(255,200,40,.75)}}
+.tokx.active{filter:drop-shadow(0 0 4px #ffd54a) drop-shadow(0 0 2px #ffd54a)}
+@media (prefers-reduced-motion:reduce){.pcard.turn,.cell.land103,.cell.trail103{animation:none}}
+.ban103[hidden],.tick103[hidden]{display:none!important}
+html.m103.phone body.p9 #phoneMenu .pmhint{display:none}
+html.m103.phone body.p9 #phoneMenu .pmsec button:not(#muteBtn){flex:1 1 100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* v10.3: rent/build pulses on a player card stay inside the card (the default ring grows past it and clipped the Players sheet) */
+html.phone body #p9sheet .pcard .pulse-ring{inset:0;animation-name:ring103}
+@keyframes ring103{0%{opacity:1;box-shadow:inset 0 0 0 0 currentColor}100%{opacity:0;box-shadow:inset 0 0 0 6px currentColor}}
+/* v10.3: Players sheet compacts (spacing only, same font sizes) when heavy holdings would make it clip */
+html.pl103.phone body #p9sheet .pcard{padding:5px 8px;margin-bottom:4px}
+html.pl103.phone body #p9sheet .pcard .pctl{margin:3px 0;gap:4px}
+html.pl103.phone body #p9sheet .players{gap:4px}
+html.pl103b.phone body #p9sheet .pcard{padding:3px 6px;margin-bottom:2px}
+html.pl103b.phone body #p9sheet .pcard .pctl{margin:2px 0}
+html.pl103b.phone body #p9sheet .p9body{padding-top:2px;padding-bottom:2px}
+
+</style>
+<script id="v103">
+/* v10.3: board zoom buttons (+ 2D zoom/pan), move trail, landing pulse + result banner, 2D ownership strips, event ticker.
+   Everything here is an overlay on .view3d (absolute positioned), so the board's size and the layout never change. */
+(function () {
+  var D = BOARD_DATA, PC = ["#e63946", "#1d6fd8", "#2a9d8f", "#f4a261", "#8e44ad", "#6d4c41"];
+  function S() { var u = window.TravelMonopolyUI; return u && u.getState ? u.getState() : null; }
+  function busy() { var u = window.TravelMonopolyUI; return !!(u && u.isAnimating && u.isAnimating()); }
+  function T3() { var t = window.TravelMonopoly3D; return t && t.isActive && t.isActive() ? t : null; }
+  function fast() { return !!(window.FX && FX.isFast && FX.isFast()); }
+  function followOn() { var t = window.TravelMonopoly3D; return t && t.followOn ? t.followOn() : true; }
+  function el(cls, tag) { var e = document.createElement(tag || "div"); e.className = cls; return e; }
+  var board = document.getElementById("board"), host = board.closest(".view3d") || board.parentNode;
+  function cell(pos) { return board.querySelector('.cell[data-pos="' + pos + '"]'); }
+
+  /* no browser zoom (iOS ignores user-scalable=no, so also block its gesture events) */
+  ["gesturestart", "gesturechange"].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false }); });
+
+  /* ---------- overlays ---------- */
+  var ctl = el("z103"); ctl.innerHTML = '<button data-z="in" aria-label="Zoom in" title="Zoom in on the current token (or double-tap the board)">🔍</button><button data-z="reset" aria-label="Show the whole board" title="Show the whole board">⤢</button>';
+  var ban = el("ban103"), tick = el("tick103"); ban.setAttribute("role", "status"); tick.setAttribute("aria-live", "off");
+  host.appendChild(ctl); document.body.appendChild(ban); document.body.appendChild(tick);
+  function place() { // banner + ticker are position:fixed over the board, so on short phones (small board) they can be wider than the board
+    var r = host.getBoundingClientRect(); if (!r.width) return; var cx = r.left + r.width / 2, w = Math.min(innerWidth - 8, Math.max(r.width - 8, 340));
+    ban.style.left = cx + "px"; ban.style.top = (r.top + Math.max(8, r.height * .05)) + "px"; ban.style.maxWidth = Math.min(innerWidth - 16, Math.max(r.width * .86, 300)) + "px";
+    tick.style.left = Math.max(4, cx - w / 2) + "px"; tick.style.width = w + "px"; tick.style.top = (r.bottom - tick.offsetHeight - 3) + "px";
+  }
+  addEventListener("resize", place);
+
+  /* ---------- zoom ---------- */
+  var z2 = { on: false, x: 0, y: 0, follow: false };
+  function zoomedNow() { var t = T3(); return t ? t.isZoomed() : z2.on; }
+  function zoomChanged(on) { host.classList.toggle("zoomed103", !!on); }
+  function apply2() {
+    var W = board.offsetWidth, H = board.offsetHeight; z2.x = Math.max(-W, Math.min(0, z2.x)); z2.y = Math.max(-H, Math.min(0, z2.y));
+    board.style.transformOrigin = "0 0"; board.style.transform = z2.on ? "translate(" + z2.x + "px," + z2.y + "px) scale(2)" : "";
+    zoomChanged(z2.on);
+  }
+  function center2(pos) { var c = cell(pos); if (!c) return; z2.x = board.offsetWidth / 2 - 2 * (c.offsetLeft + c.offsetWidth / 2); z2.y = board.offsetHeight / 2 - 2 * (c.offsetTop + c.offsetHeight / 2); }
+  function zoomIn() {
+    var st = S(); if (!st) return; var t = T3();
+    if (t) { t.zoomTo(st.turn); return; }
+    z2.on = true; z2.follow = false; center2(st.players[st.turn].pos); board.classList.add("z103anim"); apply2();
+  }
+  function zoomReset() { var t = T3(); if (t) t.zoomReset(); z2.on = false; z2.follow = false; apply2(); }
+  ctl.addEventListener("click", function (e) { var b = e.target.closest("[data-z]"); if (!b) return; e.stopPropagation(); if (b.dataset.z === "in") zoomIn(); else zoomReset(); });
+  // 2D drag-to-pan while zoomed (a drag never counts as a tap)
+  var drag = null, eatClick = false;
+  host.addEventListener("pointerdown", function (e) { if (!z2.on || T3() || e.target.closest(".z103")) return; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: z2.x, oy: z2.y, moved: false }; board.classList.remove("z103anim"); });
+  host.addEventListener("pointermove", function (e) { if (!drag || e.pointerId !== drag.id) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true; if (drag.moved) { z2.x = drag.ox + dx; z2.y = drag.oy + dy; apply2(); } });
+  function endDrag(e) { if (!drag || e.pointerId !== drag.id) return; eatClick = drag.moved; drag = null; setTimeout(function () { eatClick = false; }, 50); }
+  host.addEventListener("pointerup", endDrag); host.addEventListener("pointercancel", endDrag);
+  host.addEventListener("click", function (e) { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);
+  addEventListener("resize", function () { if (z2.on) apply2(); });
+
+  /* ---------- move trail + landing ---------- */
+  function flash(pos, col, ms, cls, pulses, amp) {
+    var t = T3(); if (t) { t.flash(pos, col, ms, pulses, amp); return; }
+    var c = cell(pos); if (!c) return; c.style.setProperty("--fl", col); c.classList.remove(cls); void c.offsetWidth; c.classList.add(cls);
+    setTimeout(function () { c.classList.remove(cls); }, ms);
+  }
+  function move(e, path) {
+    if (fast() || !path || path.length < 2) return;
+    var steps = path.length - 1, total = e.dir === 0 ? 520 : Math.min(120 * steps, 1800);
+    if (e.dir !== 0) path.slice(1, -1).forEach(function (q, i) { setTimeout(function () { if (busy()) flash(q, "#fff1a8", 700, "trail103", 1, .45); }, (i + 1) / steps * total); });
+    if (!T3() && followOn() && !z2.on) { // 2D auto-follow: zoom in on the moving token, step along, then back to the whole board
+      z2.on = true; z2.follow = true; board.classList.add("z103anim");
+      path.forEach(function (q, i) { setTimeout(function () { if (z2.follow) { center2(q); apply2(); } }, i ? i / steps * total : 0); });
+    }
+  }
+  function land(e) {
+    if (fast()) return; flash(e.to, PC[e.pid] || "#ffd54a", 1700, "land103", 3, .75);
+    if (z2.follow) setTimeout(function () { if (z2.follow) { z2.follow = false; z2.on = false; apply2(); } }, 900);
+  }
+
+  /* ---------- banner + ticker (from the travel log) ---------- */
+  var lastSt = null, seen = 0, banT = 0, ownSig = "";
+  function nice(l) {
+    var m = /^💵 (.+) pays (.+) (\$[\d,]+) rent\.?$/.exec(l); if (m) return "💵 " + m[1] + " paid " + m[3] + " rent to " + m[2];
+    return l.replace(/\.$/, "");
+  }
+  function isHdr(l) { return /^—/.test(l) || /is up first|New trip begins/.test(l); }
+  var BIG = /rent|pays|paid|collect|receiv|buys|bought|wins|bankrupt|jail|customs|auction|jackpot|takes|gets|go to|advance|build|mortgag/i;
+  function showBanner(t) { place(); ban.textContent = t; ban.classList.remove("on"); void ban.offsetWidth; ban.classList.add("on"); clearTimeout(banT); banT = setTimeout(function () { ban.classList.remove("on"); }, 2600); }
+  function ticker(st) {
+    var out = []; for (var i = st.log.length - 1; i >= 0 && out.length < 3; i--) if (!isHdr(st.log[i])) out.push(nice(st.log[i]));
+    var t = out.join("  •  "); if (tick.textContent !== t) { tick.textContent = t; tick.title = out.join("\n"); }
+    tick.style.display = t ? "" : "none";
+  }
+  function owners(st) { // 2D board: owner-colour strip (+ hatching for mortgaged comes from .mortgaged)
+    var sig = JSON.stringify(st.props); if (sig === ownSig && board.querySelector(".cell")) return; ownSig = sig;
+    board.querySelectorAll(".cell").forEach(function (c) { var o = st.props[+c.dataset.pos]; c.classList.toggle("own103", !!o); if (o) c.style.setProperty("--own", PC[o.owner]); });
+  }
+  function fitMenu() { // v10.3: the Menu sheet compacts itself (as on 548px-tall screens) whenever it would clip at big text sizes
+    var m = document.getElementById("phoneMenu"); if (!m || !m.offsetParent || document.documentElement.classList.contains("m103")) return;
+    if (m.scrollHeight > m.clientHeight + 1) document.documentElement.classList.add("m103");
+  }
+  function over(e) { return e && e.offsetParent && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1); }
+  function fitPlayers() { // v10.3: step up pl103 -> pl103b while the open Players sheet would clip
+    var sh = document.querySelector("#p9sheet.on"), de = document.documentElement; if (!sh || !sh.querySelector(".players")) return;
+    var els = [sh.querySelector(".p9body"), sh.querySelector(".players")].concat([].slice.call(sh.querySelectorAll(".players .pcard")));
+    if (!els.some(over)) return;
+    if (!de.classList.contains("pl103")) de.classList.add("pl103"); else de.classList.add("pl103b");
+  }
+  addEventListener("resize", function () { document.documentElement.classList.remove("m103", "pl103", "pl103b"); });
+  function poll() {
+    fitMenu(); fitPlayers();
+    place(); var on = !!board.querySelector(".cell") && !!host.offsetParent; ban.hidden = tick.hidden = !on;
+    var st = S(); if (!st || !st.log) { tick.style.display = "none"; return; }
+    if (st !== lastSt) { if (!lastSt || st.log.length < seen) seen = st.log.length; lastSt = st; ticker(st); }
+    if (!board.querySelector(".cell")) return;
+    owners(st);
+    if (busy() || st.log.length === seen) return;
+    var fresh = st.log.slice(seen).filter(function (l) { return !isHdr(l); }); seen = st.log.length; ticker(st);
+    var pick = null; for (var i = fresh.length - 1; i >= 0; i--) if (BIG.test(fresh[i])) { pick = fresh[i]; break; }
+    if (!pick && fresh.length) pick = fresh[fresh.length - 1];
+    if (pick && !fast()) showBanner(nice(pick));
+  }
+  setInterval(poll, 250);
+  window.TM103 = { move: move, land: land, zoomChanged: zoomChanged, zoomIn: zoomIn, zoomReset: zoomReset, isZoomed: zoomedNow, _poll: poll, version: "v10.3" };
 })();
 
 </script>
