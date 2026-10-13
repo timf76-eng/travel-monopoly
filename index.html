@@ -3732,9 +3732,9 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     }
     h += "</div>";
     if (E.isOwnable(pos)) {
-      h += '<div class="stub"><div><div class="lbl2">Price</div><div class="val">' + M(s.price) + '</div></div><div><div class="lbl2">Mortgage value</div><div class="val">' + M(s.mortgage) + "</div></div>";
+      h += '<div class="stub"><div class="sp-price"><div class="lbl2">Price</div><div class="val">' + M(s.price) + '</div></div><div><div class="lbl2">Mortgage value</div><div class="val">' + M(s.mortgage) + "</div></div>";
       if (s.type === "property") h += '<div><div class="lbl2">House / resort</div><div class="val">' + M(D.groups[s.group].houseCost) + " each</div></div>";
-      h += '<div><div class="lbl2">Owner</div><div class="val">' + (o ? st.players[o.owner].token + " " + esc(st.players[o.owner].name) : "Bank") + "</div></div>";
+      h += '<div class="sp-owner"><div class="lbl2">Owner</div><div class="val">' + (o ? st.players[o.owner].token + " " + esc(st.players[o.owner].name) : "Bank") + "</div></div>";
       if (o) h += '<div><div class="lbl2">Status</div><div class="val">' + (o.mortgaged ? "Mortgaged" : o.houses === 5 ? "Resort" : o.houses ? o.houses + " house" + (o.houses > 1 ? "s" : "") : "Open") + "</div></div>";
       if (mine) {
         var oid = o.owner;
@@ -3821,34 +3821,36 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     return h;
   }
 
-  function tradeHTML() {
+  function tradeHTML() { // v10.1: phone-friendly trade (Give / Get tabs, owned lots only as colour-grouped chips, cash stepper, offer button always on screen)
     var td = ui.tradeDraft, me = st.players[td.from !== undefined && td.from !== null ? td.from : st.turn];
     var others = st.players.filter(function (q) { return !q.bankrupt && q.id !== me.id && (!td.counter || q.id === td.to); });
     if (!others.length) return "<h2>No one to trade with</h2>";
     if (td.to === null || st.players[td.to].bankrupt || td.to === me.id) td.to = others[0].id;
-    var them = st.players[td.to];
-    var h = "<h2>🤝 " + (td.counter ? "Counter-offer" : "Trade") + "</h2>" + (td.counter ? "<div class='hint'>Prefilled with " + esc(them.name) + "'s offer, flipped to your side. Change anything, then send it back.</div>" : "") + "<div class='setup-row'>" + me.token + " " + esc(me.name) + " trades with: ";
-    others.forEach(function (q) { h += '<button class="small' + (q.id === td.to ? " primary" : "") + '" data-tradeto="' + q.id + '">' + q.token + " " + esc(q.name) + "</button>"; });
-    h += '</div><div class="tradecols">' + tradeCol(me, "give", td) + tradeCol(them, "get", td) + "</div>";
+    var them = st.players[td.to], tab = ui.tradeTab === "get" ? "get" : "give";
+    var sum = function (x) { var n = (x.props || []).length; return (x.cash ? M(x.cash) : "") + (x.cash && n ? " + " : "") + (n ? n + " lot" + (n > 1 ? "s" : "") : "") + (x.jailCards ? " + " + x.jailCards + " card" : "") || "nothing"; };
+    var h = '<div class="tr101"><h2>🤝 ' + (td.counter ? "Counter-offer" : "Trade") + "</h2>";
+    h += '<div class="tr-with">' + (td.counter ? "With " : "Trade with: ") + others.map(function (q) { return '<button class="small' + (q.id === td.to ? " primary" : "") + '" data-tradeto="' + q.id + '">' + q.token + ' <span class="tn">' + esc(q.name) + "</span></button>"; }).join("") + "</div>";
+    h += '<div class="tr-tabs"><button data-ui="ttab" data-side="give" class="' + (tab === "give" ? "on" : "") + '">You give<small>' + esc(sum(td.give)) + '</small></button><button data-ui="ttab" data-side="get" class="' + (tab === "get" ? "on" : "") + '">You get<small>' + esc(sum(td.get)) + "</small></button></div>";
+    h += tradeCol(tab === "give" ? me : them, tab, td);
     var err = E.validateTrade(st, { from: me.id, to: them.id, give: JSON.parse(JSON.stringify(td.give)), get: JSON.parse(JSON.stringify(td.get)) });
     td.hint = them.cpu ? them.name + " is a " + AI.savvyName(them.savvy) + " trader: " + (SAVVY_DESC[them.savvy] || SAVVY_DESC.fair) + "." : "";
-    h += "<p class='hint'>Properties in a color group with buildings can't be traded. Mortgaged property costs the receiver a 10% fee. <b id='tradeErr' style='color:var(--stamp)'>" + esc(err || "") + "</b></p>";
-    if (td.hint) h += "<p class='hint'>🤖 " + esc(td.hint) + "</p>";
-    h += '<div class="row" style="display:flex;gap:8px"><button class="primary" data-ui="propose"' + (err ? " disabled" : "") + ">" + (td.counter ? "Send counter-offer to " : "Offer to ") + esc(them.name) + '</button><button data-ui="' + (td.counter ? "counter-cancel" : "close") + '">' + (td.counter ? "Back to the offer" : "Cancel") + "</button></div>";
+    h += "<div class='tr-foot'><p class='hint'><b id='tradeErr' style='color:var(--stamp)'>" + esc(err || "") + "</b>" + (err ? "" : "Lots in a group with buildings can't be traded; mortgaged lots cost the receiver 10%.") + "</p>";
+    h += '<div class="row tr-btns"><button class="primary" data-ui="propose"' + (err ? " disabled" : "") + ">" + (td.counter ? "Send counter to " : "Offer to ") + '<span class="tn">' + esc(them.name) + '</span></button><button data-ui="' + (td.counter ? "counter-cancel" : "close") + '">' + (td.counter ? "Back" : "Cancel") + "</button></div></div></div>";
     return h;
   }
   function tradeCol(p, side, td) {
-    var props = Object.keys(st.props).map(Number).filter(function (k) { return st.props[k].owner === p.id; }).sort(function (a, b) { return a - b; });
+    var props = Object.keys(st.props).map(Number).filter(function (k) { return st.props[k].owner === p.id; }).sort(function (a, b) { return a - b; }); // board order = colour groups together
     var x = td[side];
-    var h = '<div class="col"><b>' + p.token + " " + esc(p.name) + " gives</b> <span class='hint'>(cash " + M(p.cash) + ")</span>";
-    h += '<label>Cash <input type="number" min="0" max="' + p.cash + '" value="' + (x.cash || 0) + '" data-tcash="' + side + '" style="width:90px"></label>';
-    if (p.jailCards.length) h += '<label>Free cards <input type="number" min="0" max="' + p.jailCards.length + '" value="' + (x.jailCards || 0) + '" data-tjail="' + side + '" style="width:60px"></label>';
+    var h = '<div class="col tr-side"><div class="tr-cash"><span>' + p.token + " <b class='tn'>" + esc(p.name) + "</b> gives · has " + M(p.cash) + '</span><span class="tr-step"><button class="small" data-ui="tstep" data-side="' + side + '" data-d="-50">−50</button>' +
+      '<input type="number" inputmode="numeric" min="0" max="' + p.cash + '" value="' + (x.cash || 0) + '" data-tcash="' + side + '" aria-label="Cash"><button class="small" data-ui="tstep" data-side="' + side + '" data-d="50">+50</button></span></div>';
+    if (p.jailCards.length) h += '<label class="tr-jail">Free cards <input type="number" min="0" max="' + p.jailCards.length + '" value="' + (x.jailCards || 0) + '" data-tjail="' + side + '"></label>';
     if (!props.length) h += "<div class='hint'>No properties</div>";
+    h += '<div class="tr-chips">';
     props.forEach(function (k) {
-      var s = sp(k);
-      h += '<label><input type="checkbox" data-tprop="' + side + "|" + k + '"' + (x.props.indexOf(k) >= 0 ? " checked" : "") + '><span class="sw" style="background:' + spaceColor(s) + '"></span>' + esc(s.name) + (st.props[k].mortgaged ? " <i>(mortgaged)</i>" : "") + (st.props[k].houses ? " 🏠" : "") + "</label>";
+      var s = sp(k), o = st.props[k];
+      h += '<label class="tr-chip' + (x.props.indexOf(k) >= 0 ? " on" : "") + '" title="' + esc(s.name) + '"><input type="checkbox" data-tprop="' + side + "|" + k + '"' + (x.props.indexOf(k) >= 0 ? " checked" : "") + '><span class="sw" style="background:' + spaceColor(s) + '"></span><span class="cn">' + esc(s.short || s.name) + "</span>" + (o.mortgaged ? '<i title="mortgaged">M</i>' : "") + (o.houses ? "🏠" : "") + "</label>";
     });
-    return h + "</div>";
+    return h + "</div></div>";
   }
 
   function creditsHTML() {
@@ -3980,7 +3982,9 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       var ps = ui.setup.players.slice(0, ui.setup.n).map(function (p, i) { return { name: (p.name || "").trim() || (p.cpu ? "Computer " : "Player ") + (i + 1), token: p.token, cpu: !!p.cpu, level: p.cpu ? (p.level || "medium") : undefined, savvy: p.cpu ? (p.savvy || "fair") : undefined, autoBuild: p.cpu ? undefined : E.normAutoBuild(p.autoBuild) }; });
       skipAnimations(); st = E.newGame(ps, { autoMortgage: ui.setup.autoMortgage === true, parking: { mode: ui.setup.parking || "classic", amount: ui.setup.parkingAmount == null ? 200 : ui.setup.parkingAmount } }); ui.modal = null; save(); renderModal(); render(); FX.setDice([1, 1], false); return;
     }
-    if (u === "trade") { if (!st || st.trade || (st.phase !== "roll" && st.phase !== "end")) { toast("Trade at the start or end of your turn"); return; } ui.tradeDraft = { to: null, give: { cash: 0, props: [], jailCards: 0 }, get: { cash: 0, props: [], jailCards: 0 } }; openModal({ type: "trade" }); return; }
+    if (u === "trade") { if (!st || st.trade || (st.phase !== "roll" && st.phase !== "end")) { toast("Trade at the start or end of your turn"); return; } ui.tradeTab = "give"; ui.tradeDraft = { to: null, give: { cash: 0, props: [], jailCards: 0 }, get: { cash: 0, props: [], jailCards: 0 } }; openModal({ type: "trade" }); return; }
+    if (u === "ttab") { ui.tradeTab = d.side; renderModal(); return; }
+    if (u === "tstep") { var tsd = ui.tradeDraft, tsp = st.players[d.side === "give" ? (tsd.from !== undefined && tsd.from !== null ? tsd.from : st.turn) : tsd.to]; tsd[d.side].cash = Math.max(0, Math.min(tsp.cash, (tsd[d.side].cash || 0) + (+d.d))); renderModal(); return; }
     if (u === "propose") {
       var td = ui.tradeDraft;
       if (td.counter) { ui.modal = null; renderModal(); if (!doAct({ type: "counterTrade", offer: { give: td.give, get: td.get } })) openModal({ type: "trade" }); else scheduleCpu(); return; }
@@ -7339,6 +7343,63 @@ html.ol10-on, html.ol10-on body { overflow: hidden }
 #ol10 .v-rules { gap: 7px } #ol10 .v-rules .big10 { margin-top: auto; align-items: center; min-height: 44px; padding: 6px }
 #ol10 .toast10 { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: #14315c; color: #fff; padding: 10px 16px; border-radius: 20px; font-weight: 600; max-width: 90vw; text-align: center; z-index: 9001 }
 
+/* v11 fix (Tim's Samsung playtest, ~412x780): the space / property sheet must fit with every button visible (no scrolling).
+   The sheet is a dvh-high column: header + numbers + buttons stay, the photo / rent table give way first. */
+html.phone body.p9 .modal:has(> .ticket) { display: flex; flex-direction: column; height: 100dvh; max-height: 100dvh; overflow: hidden }
+html.phone body.p9 .modal:has(> .ticket) > .ticket { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; margin-top: 50px }
+html.phone body.p9 .overlay .modal > .ticket > .main { flex: 0 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column }
+html.phone body.p9 .overlay .modal > .ticket > .stub { flex: none }
+html.phone body.p9 .overlay .modal > .ticket .band { padding: 7px 12px; font-size: 13px }
+html.phone body.p9 .overlay .modal > .ticket .nm { font-size: 21px; margin: 3px 0 }
+html.phone body.p9 .overlay .modal > .ticket .p8glance { grid-template-columns: 1fr 1fr 1.6fr; margin: 0 0 4px } /* one row: price, rent now, owner */
+html.phone body.p9 .overlay .modal > .ticket .p8glance > div, html.phone body.p9 .overlay .modal > .ticket .p8glance > div:last-child { grid-column: auto; padding: 2px 8px; min-width: 0 }
+html.phone body.p9 .overlay .modal > .ticket .p8glance span { font-size: 10px }
+html.phone body.p9 .overlay .modal > .ticket .p8glance b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0 }
+html.phone body.p9 .overlay .modal > .ticket .stub > .sp-price, html.phone body.p9 .overlay .modal > .ticket .stub > .sp-owner { display: none } /* duplicates of the header */
+html.phone body.p9 .overlay .modal > .ticket .stub .val, html.phone body.p9 .overlay .modal > .ticket .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+html.phone body.p9 .overlay .modal > .ticket .stub > div { min-width: 0 }
+html.phone body.p9 .overlay .modal > .ticket .photo { flex: 0 1 auto; min-height: 0; max-height: 12dvh; width: 100%; object-fit: cover; border-radius: 8px }
+@media (max-height: 700px) { html.phone body.p9 .overlay .modal > .ticket .photo { display: none } }
+html.phone body.p9 .overlay .modal > .ticket table.rent { font-size: 15px; margin: 2px 0; flex: none }
+html.phone body.p9 .overlay .modal > .ticket table.rent tbody { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px }
+html.phone body.p9 .overlay .modal > .ticket table.rent tr { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc }
+html.phone body.p9 .overlay .modal > .ticket table.rent tr:last-child { grid-column: 1 / 3 }
+html.phone body.p9 .overlay .modal > .ticket table.rent td { padding: 0 2px; line-height: 1.25 }
+html.phone body.p9 .overlay .modal > .ticket .stub { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 6px; padding: 5px 8px }
+html.phone body.p9 .overlay .modal > .ticket .stub > div { grid-column: span 2 } html.phone body.p9 .overlay .modal > .ticket .stub > div.hint { grid-column: 1 / -1; font-size: 12px }
+html.phone body.p9 .overlay .modal > .ticket .stub .lbl2 { font-size: 10px } html.phone body.p9 .overlay .modal > .ticket .stub .val { font-size: 14px }
+html.phone body.p9 .overlay .modal > .ticket .stub button { grid-column: span 3; min-height: 44px; font-size: 14px; padding: 2px 4px; margin: 0 }
+html.phone body.p9 .modal:has(> .ticket) > div:last-child { flex: none; margin: 4px 0 calc(4px + env(safe-area-inset-bottom)) !important }
+html.phone body.p9 .modal:has(> .ticket) > div:last-child button { min-height: 44px }
+/* v10.1 trade sheet: Give / Get tabs, compact 2-column chips, offer button pinned at the bottom (no scrolling) */
+html.phone body.p9 .overlay .modal:has(.tr101) { display: flex; flex-direction: column; height: 100dvh; max-height: 100dvh; overflow: hidden }
+html.phone body.p9 .overlay .modal .tr101 { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 5px }
+html.phone body.p9 .overlay .modal .tr101 h2 { margin: 0; font-size: 19px }
+.tr101 .tn { display: inline-block; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom }
+.tr101 .tr-with { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; font-size: 15px }
+.tr101 .tr-with button { min-height: 40px !important; padding: 2px 8px }
+.tr101 .tr-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+.tr101 .tr-tabs button { display: flex; flex-direction: column; align-items: center; min-height: 48px; border: 2px solid #14315c; border-radius: 10px; background: #fff; font-weight: 800 }
+.tr101 .tr-tabs button.on { background: #14315c; color: #fff } .tr101 .tr-tabs small { font-weight: 500; font-size: 13px; opacity: .85 }
+.tr101 .tr-side { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow: hidden }
+.tr101 .tr-cash { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; font-size: 15px }
+.tr101 .tr-step { display: flex; gap: 4px; align-items: center } .tr101 .tr-step input { width: 78px; min-height: 40px; font-size: 16px; text-align: center }
+.tr101 .tr-step button { min-height: 40px !important; min-width: 48px }
+.tr101 .tr-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 5px; align-content: start; min-height: 0; overflow: hidden }
+.tr101 .tr-chip { display: flex !important; align-items: center; gap: 4px; min-height: 30px; padding: 2px 6px !important; border: 1px solid #c9bb98; border-radius: 8px; background: #fff; font-size: 14px; overflow: hidden; white-space: nowrap }
+.tr101 .tr-chip.on { border: 2px solid #14315c; background: #dbe8ff; font-weight: 700 }
+.tr101 .tr-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none }
+.tr101 .tr-chip .sw { flex: none; width: 10px; height: 10px; border-radius: 3px } .tr101 .tr-chip .cn { overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.tr101 .tr-chip i { flex: none; font-size: 11px; font-style: normal; background: #ffe2a8; border-radius: 4px; padding: 0 3px }
+.tr101 .tr-foot { flex: none } .tr101 .tr-foot .hint { margin: 0 0 4px; font-size: 13px }
+.tr101 .tr-btns { display: grid !important; grid-template-columns: 2fr 1fr; gap: 6px; margin: 0 0 env(safe-area-inset-bottom) !important }
+@media (max-height: 700px) {
+  html.phone body.p9 .overlay .modal .tr101 h2, .tr101 .tr-foot .hint:not(:has(b:not(:empty))) { display: none }
+  html.phone body.p9 .overlay .modal:has(.tr101) { padding-top: 4px; padding-bottom: 4px }
+  .tr101 { gap: 3px !important } .tr101 .tr-chip { min-height: 25px; font-size: 13px; padding: 1px 5px !important } .tr101 .tr-chips { gap: 2px 4px }
+  .tr101 .tr-tabs button { min-height: 44px } .tr101 .tr-tabs small { font-size: 12px }
+}
+
 </style>
 <script id="online-net">
 /* ===================== v9 online: tiny client for server/server.js (stage 1: not wired into the UI yet) =====================
@@ -7406,7 +7467,8 @@ if (typeof module !== "undefined") module.exports = Net9;
   var J = function (o) { return JSON.parse(JSON.stringify(o)); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
   function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
-  var prof = ls(ME_KEY) || { name: "", token: "" };
+  function cleanName(n) { n = String(n || "").trim(); if (/^[^@\s]+@[^@\s]+$/.test(n)) n = n.split("@")[0]; return n.slice(0, 16); }
+  var prof = ls(ME_KEY) || { name: "", token: "" }; prof.name = cleanName(prof.name);
   var S = { view: Q.get("room") ? "join" : "home", code: (Q.get("room") || "").toUpperCase().slice(0, 4), room: null, you: 0, err: "", open: false, waking: false, peek: null, state: null, toast: "" };
   var net = null, wakeT = null;
 
@@ -7456,7 +7518,7 @@ if (typeof module !== "undefined") module.exports = Net9;
     return '<div class="hdr10"><button data-a="home">◀</button><h2>' + (join ? "Join a room" : "Create a room") + "</h2></div>" +
       (join ? '<label class="f10">Room code<input id="code10" maxlength="4" autocapitalize="characters" autocomplete="off" value="' + esc(S.code) + '" placeholder="ABCD"></label>' +
         (S.peek && S.peek.missing ? '<p class="err10">No room ' + esc(S.peek.code) + " (check the code)</p>" : S.peek && S.peek.seats ? '<p class="ok10">Room ' + esc(S.peek.code) + ": " + S.peek.seats.map(function (x) { return x.token + " " + esc(x.name); }).join(", ") + "</p>" : "") : "") +
-      '<label class="f10">Your name<input id="name10" maxlength="20" value="' + esc(prof.name) + '" placeholder="Name"></label>' +
+      '<label class="f10">Your name<input id="name10" maxlength="16" value="' + esc(prof.name) + '" placeholder="Name"></label>' +
       '<div class="f10">Pick your token</div>' + tokenPicker(taken) +
       (!join && typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? '<p class="ok10">Your edited board &amp; cards will be used for this game.</p>' : "") +
       waking() + (S.err ? '<p class="err10">' + esc(S.err) + "</p>" : "") +
@@ -7559,8 +7621,8 @@ if (typeof module !== "undefined") module.exports = Net9;
     else if (a === "goCreate") { S.view = "create"; connect(); }
     else if (a === "goJoin") { S.view = "join"; connect(); if (S.code.length === 4) net.peek(S.code); }
     else if (a === "tok") prof.token = b.dataset.v, ls(ME_KEY, prof);
-    else if (a === "create") { S.busy = true; connect().createRoom({ name: prof.name.trim(), token: prof.token, theme: typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? ThemeKit.current() : null, settings: ls(PRESET_KEY + ".last") || null }); }
-    else if (a === "join") { S.busy = true; connect().joinRoom(S.code, prof.name.trim(), prof.token); }
+    else if (a === "create") { S.busy = true; connect().createRoom({ name: cleanName(prof.name), token: prof.token, theme: typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? ThemeKit.current() : null, settings: ls(PRESET_KEY + ".last") || null }); }
+    else if (a === "join") { S.busy = true; connect().joinRoom(S.code, cleanName(prof.name), prof.token); }
     else if (a === "rejoin") { var me = ls(Net9.KEY); S.view = "lobby"; connect().rejoin(me.code, me.rt); }
     else if (a === "leave") { if (confirm(amHost() ? "Close this room for everyone?" : "Leave this room?")) net.leave(); return; }
     else if (a === "share") share();
