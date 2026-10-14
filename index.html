@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11.5">
+<meta name="tm-version" content="v11.5.1">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -803,6 +803,20 @@ html.phone body.p9 .fxhint{font-size:16px}
 #gd115 .ls{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:4px}#gd115 h4{margin:4px 0 0;font-size:13px;text-transform:uppercase;opacity:.75}
 #gd115 .it{display:flex;align-items:center;gap:6px;background:#fff;border-radius:10px;padding:4px 8px}#gd115 .it span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #gd115 button{min-height:38px;border:2px solid #14315c;border-radius:10px;background:#fff;font:700 14px system-ui,sans-serif;color:#14315c;padding:2px 10px}#gd115 .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:17px}#gd115 small{opacity:.75}
+
+#net11.in11.col115{flex-direction:column;align-items:center;gap:3px;padding:3px 2px;border-radius:9px;background:rgba(20,49,92,.55);max-width:none;width:auto;white-space:normal;overflow:hidden;line-height:1}
+#net11.in11.col115 .c11{writing-mode:horizontal-tb;width:13px;margin:0 auto;text-align:center;word-break:break-all;overflow-wrap:anywhere;white-space:normal;word-spacing:-1em;font-size:10px;line-height:1.1}
+#net11.in11.col115 .me11{display:none}
+#net11.in11.col115 .tm11{font-size:9px;padding:2px 1px;width:28px;box-sizing:border-box;text-align:center;white-space:normal;border-radius:6px}
+#net11.in11.col115 .vw114{font-size:9px;text-align:center}
+#net11.in11.col115 button{width:28px;height:28px;min-width:0;min-height:0 !important;max-height:28px;padding:0;margin:0;font-size:14px;box-sizing:border-box;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#ffffff26;flex:none}
+#net11.in11.col115 #tg115{height:18px;max-height:18px;font-size:12px;background:#ffffff40}
+#net11.in11.cl115{padding:2px}
+#net11.in11.col115.tight115{gap:2px;padding:2px}#net11.in11.col115.tight115 button{width:26px;height:25px;max-height:25px;font-size:13px}#net11.in11.col115.tight115 .c11{font-size:8px}#net11.in11.col115.tight115 #tg115{height:16px;max-height:16px}
+#net11.in11.cl115>:not(#tg115){display:none !important}
+#net11.in11.cl115 #tg115{height:28px;max-height:28px}
+#tg115{border:0;color:#fff;cursor:pointer;pointer-events:auto;position:relative}#tg115 .n{position:absolute;top:-4px;right:-4px;background:#e53935;border-radius:8px;font-size:9px;padding:1px 3px}
+#net11:not(.col115) #tg115{display:none}
 </style>
 </head>
 <body>
@@ -7855,8 +7869,8 @@ var Online11 = (function () {
   function placeBar() {
     var v = document.querySelector(".view3d"); if (!v || !v.offsetParent) { bar.className = ""; bar.style.left = bar.style.top = bar.style.width = ""; return; }
     var r = v.getBoundingClientRect();
-    if (r.left >= 84) { bar.className = "gut11"; bar.style.width = (r.left - 8) + "px"; bar.style.left = "4px"; bar.style.top = (r.top + 4) + "px"; }
-    else { bar.className = "in11"; bar.style.width = ""; bar.style.left = (r.left + 6) + "px"; bar.style.top = (r.top + 6) + "px"; }
+    bar.className = "in11 col115" + (Bar1151.collapsed() ? " cl115" : ""); bar.style.width = ""; bar.style.maxHeight = (r.height - 4) + "px"; bar.style.top = (r.top + 2) + "px"; if (bar.scrollHeight > r.height - 4) bar.classList.add("tight115"); var bh = bar.offsetHeight; bar.style.top = (r.top + Math.max(2, Math.min(Math.round(r.height * 0.13), Math.round((r.height - bh) / 2)))) + "px";
+    var bw = bar.offsetWidth || 32; bar.style.left = (r.left >= bw + 6 ? r.left - bw - 3 : r.left + 1) + "px"; // v11.5.1: slim column hugging the board's left wood edge (outside it when there is room)
   }
   addEventListener("resize", function () { if (last) placeBar(); });
   function decorate() { // status bar, paused/vote banner, countdown badge on the disconnected player's chip
@@ -7866,7 +7880,7 @@ var Online11 = (function () {
     var host = (last.seats || []).filter(function (x) { return x.host; })[0];
     if (me < 0) h += '<span class="me11">👀 Watching</span>'; if (last.viewers) h += '<span class="vw114">👀 ' + last.viewers + "</span>";
     if (me >= 0) h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
-    if (bar._h !== h) { bar.innerHTML = h; bar._h = h; } bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); if (window.Rules113 && me >= 0) Rules113.mount(bar); if (window.Share114) Share114.mount(bar); if (window.Guard115) Guard115.mount(bar, last); placeBar();
+    if (bar._h !== h) { bar.innerHTML = h; bar._h = h; } bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); if (window.Rules113 && me >= 0) Rules113.mount(bar); if (window.Share114) Share114.mount(bar); if (window.Guard115) Guard115.mount(bar, last); if (window.Bar1151) Bar1151.mount(bar); placeBar();
     var v = last.vote, b = "";
     if (v && v.seat !== me && me >= 0) {
       var who = st.players[v.seat], mine = v.votes && v.votes[me];
@@ -8688,6 +8702,20 @@ var Profile115 = (function () { // v11.5: local online win/loss record (this pho
     if (r.done.indexOf(code + ":" + (m.seq || 0)) >= 0 || r.done.some(function (d) { return d.split(":")[0] === code; })) return;
     if (st.winner === m.you) r.w++; else r.l++; r.done = r.done.concat(code + ":" + (m.seq || 0)).slice(-30); try { localStorage.setItem(K, JSON.stringify(r)); } catch (e) {} }
   return { rec: function () { var r = get(); return { w: r.w, l: r.l }; }, seen: seen };
+})();
+</script><script>
+var Bar1151 = (function () { // v11.5.1: collapse/expand tab for the room column (state remembered)
+  var K = "timTravelMonopoly.roomBarCollapsed", btn = null;
+  function collapsed() { try { return localStorage.getItem(K) === "1"; } catch (e) { return false; } }
+  function mount(bar) {
+    if (!btn) { btn = document.createElement("button"); btn.id = "tg115"; btn.type = "button";
+      btn.addEventListener("click", function (e) { e.stopPropagation(); try { localStorage.setItem(K, collapsed() ? "0" : "1"); } catch (x) {} var b = document.getElementById("net11"); if (b) { b.classList.toggle("cl115", collapsed()); if (!collapsed() && b.scrollHeight > b.clientHeight + 1) b.classList.add("tight115"); } label(); }); }
+    if (btn.parentNode !== bar || bar.lastChild !== btn) bar.appendChild(btn); label();
+  }
+  function label() { if (!btn) return; var c = collapsed(), u = window.Chat112 ? Chat112.unread() : 0, t = c ? "🌐›" : "‹";
+    btn.setAttribute("aria-label", c ? "Show room bar" : "Hide room bar"); btn.title = btn.getAttribute("aria-label");
+    var h = t + (c && u ? '<span class="n">' + (u > 9 ? "9+" : u) + "</span>" : ""); if (btn.innerHTML !== h) btn.innerHTML = h; }
+  return { collapsed: collapsed, mount: mount };
 })();
 </script></body>
 </html>
