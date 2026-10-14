@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11.3">
+<meta name="tm-version" content="v11.4">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -737,6 +737,29 @@ html.phone body.p9 .fxhint{font-size:16px}
 #rv113 .q{font-weight:700}#rv113 .lb{font-size:14px}#rv113 .sm{font-size:12px;opacity:.8}
 #rv113 .row{display:flex;gap:8px}#rv113 .row button{flex:1}#rv113 [data-r113=yes]{background:#2e7d32;color:#fff}#rv113 [data-r113=no]{background:#c62828;color:#fff}
 #rt113{position:fixed;left:50%;bottom:24%;transform:translateX(-50%);z-index:56;background:#fffffff2;color:#14315c;border-radius:14px;padding:7px 13px;font-size:14px;font-weight:700;box-shadow:0 3px 14px #0007;max-width:88vw;text-align:center;pointer-events:none;transition:opacity .4s}
+
+#ol10 .sv114 h2{margin:4px 0 8px;font-size:20px}
+#ol10 .sg114{display:flex;align-items:center;gap:6px;background:#ffffff14;border-radius:12px;padding:7px 8px;margin-bottom:6px}
+#ol10 .sg114 .i114{flex:1;min-width:0;font-size:13px}#ol10 .sg114 .pl114{opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ol10 .sg114 button{flex:none;border:0;border-radius:10px;padding:7px 9px;font-weight:700;background:#ffc93c;color:#14315c}#ol10 .sg114 .del114{background:#ffffff22;color:#fff}
+#rs114{position:fixed;inset:0;z-index:70;background:#000a;display:flex;align-items:center;justify-content:center}
+#rs114 .bx{background:#14315c;color:#fff;border-radius:14px;width:min(92vw,400px);padding:14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 30px #000a;max-height:94vh;overflow:hidden}
+#rs114 h3{margin:0;font-size:19px}#rs114 .inf{font-size:14px;opacity:.9}#rs114 .st{font-size:13px;color:#ffe08a;min-height:1em}
+#rs114 button{border:0;border-radius:10px;padding:10px;font-weight:700;font-size:16px}#rs114 .go{background:#2e7d32;color:#fff}#rs114 .go:disabled{opacity:.45}#rs114 .no{background:#ffffff22;color:#fff;font-size:14px;padding:7px}
+
+#ol10 .srv114{font-size:12px;opacity:.8;text-align:center;margin-top:6px}#ol10 .srv114.on{opacity:.65}#ol10 .srv114 .spin10{width:10px;height:10px;vertical-align:-1px;margin-right:5px}
+#net11 .vw114{opacity:.9}
+#phoneMenu .rm114{display:contents}
+#phoneMenu.c1 .pmsec:last-child{display:none}
+#phoneMenu.c2 .pmsec{gap:4px}#phoneMenu.c2 .pmsec button:not(#muteBtn){min-height:38px;padding-top:3px;padding-bottom:3px}
+#phoneMenu.c3 .pmsec>h5{display:none}#phoneMenu.c3 .pmsec button:not(#muteBtn){min-height:34px}
+#sh114b,#ud114{border:0;background:#ffffff22;color:#fff;border-radius:9px;padding:1px 6px;font-size:13px;line-height:1.3;cursor:pointer;pointer-events:auto}
+#st114{position:fixed;inset:0;z-index:66;background:#000a;display:flex;align-items:center;justify-content:center}
+#st114 .bx{background:#14315c;color:#fff;border-radius:14px;width:min(96vw,460px);max-height:96vh;overflow:hidden;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px}
+#st114 h3{margin:0;font-size:18px;display:flex;justify-content:space-between}#st114 h3 button{border:0;background:none;color:#fff;font-size:18px}
+#st114 table{border-collapse:collapse;width:100%;font-size:12.5px;table-layout:fixed}#st114 th{font-size:11px;font-weight:600;opacity:.8;padding:2px}#st114 td{padding:3px 2px;text-align:center;border-top:1px solid #ffffff22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#st114 td:first-child,#st114 th:first-child{text-align:left;width:28%}#st114 .hl{font-size:13px;background:#ffffff14;border-radius:9px;padding:6px 8px}#st114 .hl div{margin:1px 0}
+#st114 .ok{border:0;border-radius:10px;padding:8px;font-weight:700;background:#ffc93c;color:#14315c}
 </style>
 </head>
 <body>
@@ -1270,8 +1293,12 @@ var Engine = (function () {
   }
 
   /* ---------- money ---------- */
+  function stat(st, pid) { // v11.4 end-of-game stats
+    st.stats = st.stats || {}; return st.stats[pid] = st.stats[pid] || { rentIn: 0, rentOut: 0, jail: 0, go: 0, bought: 0, biggest: 0, biggestWhy: "", propRent: {} };
+  }
   function charge(st, p, amount, toId, reason) {
     if (amount <= 0) return;
+    var S0 = stat(st, p.id); if (amount > S0.biggest) { S0.biggest = amount; S0.biggestWhy = String(reason || "payment").slice(0, 60); }
     var toBank = toId === null || toId === undefined; // every bank payment through charge() is a tax, fine, or card: Lounge pot money
     if (p.cash >= amount && !st.debts.some(function (d) { return d.from === p.id; })) {
       p.cash -= amount;
@@ -1287,11 +1314,11 @@ var Engine = (function () {
     emit({ type: "move", pid: p.id, from: p.pos, to: D.rules.jailPos, dir: 0, jail: true });
     p.pos = D.rules.jailPos; p.inJail = true; p.jailTurns = 0;
     st.rollAgain = false; st.doubles = 0;
-    log(st, "🛃 " + p.name + " goes to " + (D.meta.jailName || "Jail") + "!");
+    log(st, "🛃 " + p.name + " goes to " + (D.meta.jailName || "Jail") + "!"); stat(st, p.id).jail++;
   }
   function advanceTo(st, p, dest, ctx) {
-    if (dest === 0 && p.pos !== 0 && st.opts && st.opts.doubleGo) { p.cash += D.rules.goSalary * 2; log(st, "🏠 " + p.name + " lands right on GO and collects double: " + money(D.rules.goSalary * 2) + "."); }
-    else if (dest < p.pos || (dest === 0 && p.pos !== 0)) { p.cash += D.rules.goSalary; log(st, "🏠 " + p.name + " passes GO and collects " + money(D.rules.goSalary) + "."); }
+    if (dest === 0 && p.pos !== 0 && st.opts && st.opts.doubleGo) { p.cash += D.rules.goSalary * 2; stat(st, p.id).go++; log(st, "🏠 " + p.name + " lands right on GO and collects double: " + money(D.rules.goSalary * 2) + "."); }
+    else if (dest < p.pos || (dest === 0 && p.pos !== 0)) { p.cash += D.rules.goSalary; stat(st, p.id).go++; log(st, "🏠 " + p.name + " passes GO and collects " + money(D.rules.goSalary) + "."); }
     emit({ type: "move", pid: p.id, from: p.pos, to: dest, dir: 1 });
     p.pos = dest; land(st, p, ctx);
   }
@@ -1320,6 +1347,7 @@ var Engine = (function () {
     var owner = st.players[o.owner];
     log(st, "💵 " + p.name + " pays " + owner.name + " " + money(rent) + " rent.");
     emit({ type: "rent", pos: p.pos, from: p.id, to: o.owner, amount: rent });
+    stat(st, p.id).rentOut += rent; var So = stat(st, o.owner); So.rentIn += rent; So.propRent[p.pos] = (So.propRent[p.pos] || 0) + rent;
     charge(st, p, rent, o.owner, "rent on " + s.name);
   }
 
@@ -1597,7 +1625,7 @@ var Engine = (function () {
     else if (d.to === null && d.pot) addToPot(st, d.amount, d.reason);
     st.debts.shift();
     if (d.purchase !== undefined && d.purchase !== null) {
-      st.props[d.purchase] = { owner: dp.id, houses: 0, mortgaged: false };
+      st.props[d.purchase] = { owner: dp.id, houses: 0, mortgaged: false }; stat(st, dp.id).bought++;
       log(st, "🔨 " + dp.name + " pays " + money(d.amount) + " and takes " + sp(d.purchase).name + ".");
       emit({ type: "buy", pid: dp.id, pos: d.purchase, price: d.amount, how: "auction" });
       return;
@@ -1675,7 +1703,7 @@ var Engine = (function () {
           log(st, "🔨 " + w.name + " wins " + sp(a.pos).name + " for " + money(a.high) + " and needs to raise " + money(a.high - w.cash) + " to pay for it.");
         } else if (raiseFor(st, w.id, a.high, "the winning bid on " + sp(a.pos).name)) {
           w.cash -= a.high;
-          st.props[a.pos] = { owner: w.id, houses: 0, mortgaged: false };
+          st.props[a.pos] = { owner: w.id, houses: 0, mortgaged: false }; stat(st, w.id).bought++;
           log(st, "🔨 " + w.name + " wins " + sp(a.pos).name + " for " + money(a.high) + ".");
           emit({ type: "buy", pid: w.id, pos: a.pos, price: a.high, how: "auction" });
         } else log(st, "🔨 " + w.name + " can't cover the " + money(a.high) + " bid. " + sp(a.pos).name + " stays with the bank."); // defensive: bids are capped at maxSpend
@@ -1880,7 +1908,7 @@ var Engine = (function () {
         s = sp(p.pos);
         if (maxSpend(st, p.id) < s.price) return "Not enough cash, even with mortgages (decline to auction)";
         if (!raiseFor(st, p.id, s.price, s.name)) return "Couldn't raise enough cash"; // unreachable: maxSpend covers it
-        p.cash -= s.price; st.props[p.pos] = { owner: p.id, houses: 0, mortgaged: false };
+        p.cash -= s.price; st.props[p.pos] = { owner: p.id, houses: 0, mortgaged: false }; stat(st, p.id).bought++;
         log(st, "🧳 " + p.name + " buys " + s.name + " for " + money(s.price) + ".");
         emit({ type: "buy", pid: p.id, pos: p.pos, price: s.price, how: "buy" });
         st.phase = "end"; return null;
@@ -3323,7 +3351,9 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     skipAnimations();
     var prev = st ? st.players.map(function (p) { return { pos: p.pos, inJail: p.inJail }; }) : null;
     var wasOver = st && st.phase === "gameover";
+    var undoSnap = UNDOABLE[a.type] ? JSON.stringify(st) : null;
     var r = E.act(st, a);
+    if (r.ok) { ui.undo = undoSnap ? { s: undoSnap, label: UNDOABLE[a.type] } : (a.type === "setTradePrefs" || a.type === "setAutoBuild" ? ui.undo : null); if (window.Undo114) Undo114.refresh(); }
     if (!r.ok) { toast(r.error); if (r.exception && window.console) console.error(r.exception); }
     save();
     var evs = r.ok ? E.lastEvents() : [];
@@ -3331,6 +3361,8 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     else { if (r.ok) { evs.forEach(function (e) { if (e.type === "roll") FX.setDice(e.dice, false); }); fastSounds(evs); } render(); celebrateIfOver(wasOver); }
     return r.ok;
   }
+  var UNDOABLE = { buy: "buy", build: "build", sell: "sell", mortgage: "mortgage", unmortgage: "unmortgage", acceptTrade: "trade" }; // v11.4: never dice/rolls
+  function undoLast() { if (!ui.undo || ui.online || ui.busy) return false; var u = ui.undo; ui.undo = null; st = JSON.parse(u.s); save(); render(); toast("↶ Undid the " + u.label); if (window.Undo114) Undo114.refresh(); return true; }
   function celebrateIfOver(wasOver) { if (st && st.phase === "gameover" && !wasOver) { FX.celebrate(6500); SFX.fanfare(); } }
   function fastSounds(evs) {
     var delay = 0;
@@ -3548,7 +3580,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
       var rank = st.players.slice().sort(function (a, b) { return E.netWorth(st, b.id) - E.netWorth(st, a.id); });
       h += "<h3>🏆 " + w.token + " " + esc(w.name) + " wins the world tour!</h3><div class='hint'>Final net worth:</div>";
       rank.forEach(function (q) { h += "<div>" + q.token + " " + esc(q.name) + ": <b>" + M(E.netWorth(st, q.id)) + "</b>" + (q.bankrupt ? " (bankrupt)" : "") + "</div>"; });
-      h += '<div class="row"><button class="primary big" data-ui="newgame">New Game</button></div>';
+      h += '<div class="row"><button class="big" data-stats114="1">📊 Game stats</button><button class="primary big" data-ui="newgame">New Game</button></div>';
       return h;
     }
     if (st.trade) {
@@ -4207,7 +4239,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     render(); celebrateIfOver(wasOver); return Promise.resolve();
   }
   function setOnline(o) { if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; } ui.online = o; ui.modal = null; renderModal(); st = null; built = false; render(); }
-  window.TravelMonopolyUI = { netState: netState, setOnline: setOnline, setMe: function (i) { ui.me = i; }, getState: function () { return st; }, act: doAct, render: render, isAnimating: function () { return ui.busy; }, skip: skipAnimations, cpuPending: function () { return !!cpuTimer; } };
+  window.TravelMonopolyUI = { undo: undoLast, canUndo: function () { return !!(ui.undo && !ui.online) && (ui.undo.label); }, netState: netState, setOnline: setOnline, setMe: function (i) { ui.me = i; }, getState: function () { return st; }, act: doAct, render: render, isAnimating: function () { return ui.busy; }, skip: skipAnimations, cpuPending: function () { return !!cpuTimer; } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
 
@@ -7643,11 +7675,30 @@ html.phone body.p9 .overlay .modal > .ticket .nm, html.phone body.p9 .overlay .m
 var Net9 = (function () {
   var KEY = "timTravelMonopoly.online";
   function store() { try { return typeof localStorage !== "undefined" ? localStorage : null; } catch (e) { return null; } }
+  var GAMES = "timTravelMonopoly.games";
+  function games() { var s = store(); try { return (s && JSON.parse(s.getItem(GAMES) || "null")) || {}; } catch (e) { return {}; } }
+  function saveGames(g) { var s = store(); if (!s) return; var ks = Object.keys(g).sort(function (a, b) { return g[b].savedAt - g[a].savedAt; });
+    ks.slice(5).forEach(function (k) { delete g[k]; }); // keep the 5 most recent games
+    for (;;) { try { s.setItem(GAMES, JSON.stringify(g)); return; } catch (e) { var k = Object.keys(g).sort(function (a, b) { return g[a].savedAt - g[b].savedAt; })[0]; if (!k || Object.keys(g).length < 2) return; delete g[k]; } } } // full storage: drop the oldest
   function saved() { try { var s = store(); return s ? JSON.parse(s.getItem(KEY) || "null") : null; } catch (e) { return null; } }
   function connect(url, opts) {
     opts = opts || {};
     var opened = false, WS = opts.WebSocket || (typeof WebSocket !== "undefined" ? WebSocket : null), ws = null, queue = [], subs = {}, me = saved(), closed = false, retry = 0;
     function on(t, fn) { (subs[t] = subs[t] || []).push(fn); return api; }
+    var theme = null;
+    function keep(m, rawText) { // v0.6.0: save the newest authoritative snapshot of this game (per room) so it can be resumed after a server restart
+      if (m.t === "room" && m.theme !== undefined) theme = m.theme;
+      if (!me || !me.rt || (m.code && m.code !== me.code)) return;
+      if (m.t === "state" && m.seatCore) {
+        var c = JSON.parse(typeof rawText === "string" ? rawText : String(rawText)); // a fresh copy: the board may change the parsed one
+        var g = games(), old = g[me.code] || {};
+        g[me.code] = { snap: { code: c.code, seq: c.seq, state: c.state, seatCore: c.seatCore, theme: theme }, chat: old.chat || [], rt: me.rt, seat: c.you, savedAt: Date.now(),
+          turn: c.state.turnCount || 0, players: c.state.players.map(function (p) { return { name: p.name, token: p.token, cash: p.cash, bankrupt: !!p.bankrupt }; }), over: c.state.phase === "gameover" };
+        saveGames(g);
+      } else if ((m.t === "chat" || m.t === "chatlog") && games()[me.code]) {
+        var g2 = games(), e = g2[me.code]; e.chat = (m.t === "chat" ? (e.chat || []).concat(m.msg) : m.msgs || []).slice(-50); saveGames(g2);
+      }
+    }
     function fire(t, m) { (subs[t] || []).forEach(function (f) { try { f(m); } catch (e) { if (typeof console !== "undefined") console.error(e); } }); }
     function raw(m) { var s = JSON.stringify(m); if (ws && ws.readyState === 1) ws.send(s); else queue.push(s); }
     function open() {
@@ -7657,6 +7708,7 @@ var Net9 = (function () {
         var m; try { m = JSON.parse(typeof ev.data === "string" ? ev.data : String(ev.data)); } catch (e) { return; }
         if (m.t === "left" || m.t === "closed") { api.forget(); }
         if (m.t === "joined") { me = { code: m.code, rt: m.rt, seat: m.seat }; var s = store(); if (s) try { s.setItem(KEY, JSON.stringify(me)); } catch (e) {} }
+        try { keep(m, ev.data); } catch (e) {}
         fire(m.t, m);
       };
       ws.onclose = function () { fire("close"); if (!closed && opts.reconnect !== false) setTimeout(open, Math.min(10000, 500 * Math.pow(2, retry++))); };
@@ -7679,13 +7731,15 @@ var Net9 = (function () {
       pvote: function (id, choice) { raw({ t: "pvote", id: id, choice: choice }); }, // v11.2: room chat (server relays, keeps the last 50)
       recap: function (from) { raw({ t: "log", from: from || 0 }); },
       isOpen: function () { return !!ws && ws.readyState === 1; },
+      watch: function (code) { raw({ t: "watch", code: String(code || "").toUpperCase() }); }, // v0.6.0: spectate (read-only)
+      restore: function (g) { raw({ t: "restore", snap: Object.assign({}, g.snap, { chat: g.chat || [] }), rt: g.rt }); }, // v0.6.0: resume after a server restart
       me: function () { return me; }, forget: function () { me = null; var s = store(); if (s) try { s.removeItem(KEY); } catch (e) {} },
       close: function () { closed = true; if (ws) ws.close(); },
       drop: function () { if (ws) ws.close(); } // test helper: simulate lost signal (auto-reconnects unless reconnect:false)
     };
     open(); return api;
   }
-  return { connect: connect, KEY: KEY };
+  return { connect: connect, KEY: KEY, games: games, deleteGame: function (code) { var g = games(); delete g[code]; saveGames(g); } }; // v0.6.0 saved online games
 })();
 if (typeof module !== "undefined") module.exports = Net9;
 
@@ -7758,10 +7812,11 @@ var Online11 = (function () {
     var st = last.state, now = Date.now(), h = '<span class="c11">🌐 ' + esc(code) + "</span>";
     if (st.opts && st.opts.endsAt && st.phase !== "gameover") h += '<span class="tm11">⏱️ ' + mmss(st.opts.endsAt - now) + " left</span>";
     var host = (last.seats || []).filter(function (x) { return x.host; })[0];
-    h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
-    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); if (window.Rules113) Rules113.mount(bar); placeBar();
+    if (me < 0) h += '<span class="me11">👀 Watching</span>'; if (last.viewers) h += '<span class="vw114">👀 ' + last.viewers + "</span>";
+    if (me >= 0) h += '<span class="me11">' + (me >= 0 && st.players[me] ? st.players[me].token + " You" + (host && host.seat === me ? " 👑" : "") : "") + (net && !net.isOpen() ? " · 📶 reconnecting…" : "") + "</span>";
+    if (bar.innerHTML !== h) bar.innerHTML = h; bar.style.display = ""; if (window.Chat112) Chat112.mount(bar); if (window.Rules113 && me >= 0) Rules113.mount(bar); if (window.Share114) Share114.mount(bar); placeBar();
     var v = last.vote, b = "";
-    if (v && v.seat !== me) {
+    if (v && v.seat !== me && me >= 0) {
       var who = st.players[v.seat], mine = v.votes && v.votes[me];
       b = '<div class="vote11"><b>📵 ' + who.token + " " + esc(who.name) + " is still away.</b><div>Wait longer, or let a computer play for them?</div>" +
         '<div class="row11"><button data-v11="wait"' + (mine === "wait" ? ' class="on"' : "") + '>⏳ Wait</button><button data-v11="computer"' + (mine === "computer" ? ' class="on"' : "") + ">🤖 Computer</button></div>" +
@@ -7795,9 +7850,10 @@ var Online11 = (function () {
     UI.setOnline({ send: function (a) { net.sendAction(a); }, panel: panel });
     document.documentElement.classList.add("net11-on");
     net.on("state", function (m) { queue.push(m); pump(); });
-    net.on("recap", recap); if (window.Chat112) Chat112.start(net, function () { return me; }); if (window.Rules113) Rules113.start(net, function () { return me; }, function () { return last; });
+    net.on("recap", recap); if (window.Chat112) Chat112.start(net, function () { return me; }); if (window.Resume114) Resume114.watch(net); if (window.Remind114) Remind114.start(net); if (window.Share114) Share114.start(function () { return code; }); if (window.Rules113) Rules113.start(net, function () { return me; }, function () { return last; });
     net.on("error", function (m) { if (m.action) toast(m.msg); });
     net.on("event", function (e) {
+      if (e.kind === "viewers" && last) { last.viewers = e.n; decorate(); return; }
       if (!last) return; var nm = function (i) { return last.state.players[i] ? last.state.players[i].name : "?"; };
       var msg = { disconnect: "📵 " + nm(e.seat) + " lost connection", reconnect: "📶 " + nm(e.seat) + " is back", computerTakeover: "🤖 A computer is playing for " + nm(e.seat), hostChanged: "👑 " + e.name + " is now the host", voteResult: e.result === "wait" ? "⏳ Waiting longer for " + nm(e.seat) : null, timeUp: "⏰ Time's up!" }[e.kind];
       if (msg) toast(msg); if (e.kind === "hostChanged" && last.seats) last.seats.forEach(function (x) { x.host = x.seat === e.seat; }); decorate();
@@ -7828,6 +7884,9 @@ var Online11 = (function () {
   var prof = ls(ME_KEY) || { name: "", token: "" }; prof.name = cleanName(prof.name);
   var S = { view: Q.get("room") ? "join" : "home", code: (Q.get("room") || "").toUpperCase().slice(0, 4), room: null, you: 0, err: "", open: false, waking: false, peek: null, state: null, toast: "" };
   var net = null, wakeT = null;
+  S.srv = "waking"; (function () { try { var h = SERVER.replace(/^ws/, "http").replace(/\/+$/, "") + "/health", t0 = Date.now(); // v11.4: wake Render early
+    fetch(h, { mode: "no-cors", cache: "no-store" }).then(function () { S.srv = "ready"; S.srvMs = Date.now() - t0; draw(); }, function () { S.srv = "down"; draw(); }); } catch (e) { S.srv = ""; } })();
+  function srvLine() { return S.srv === "waking" ? '<div class="srv114"><span class="spin10"></span>Waking server…</div>' : S.srv === "ready" ? '<div class="srv114 on">🟢 Online server ready</div>' : S.srv === "down" ? '<div class="srv114">⚠️ Server unreachable, retrying when you go online</div>' : ""; }
 
   var el = document.createElement("div"); el.id = "ol10"; document.body.appendChild(el);
   document.documentElement.classList.add("ol10-on");
@@ -7836,7 +7895,8 @@ var Online11 = (function () {
     if (net) return net;
     net = Net9.connect(SERVER, { autoRejoin: false });
     S.open = false; wakeT = setTimeout(function () { if (!S.open) { S.waking = true; draw(); } }, 1500);
-    net.on("open", function () { S.open = true; S.waking = false; clearTimeout(wakeT); if (S.view === "join" && S.code.length === 4) net.peek(S.code); draw(); });
+    net.on("open", function () { S.open = true; S.waking = false; S.srv = "ready"; clearTimeout(wakeT);
+      if (S.autoJoin && S.view === "join" && S.code.length === 4) { S.autoJoin = false; S.busy = true; net.joinRoom(S.code, cleanName(prof.name), prof.token); } if (S.view === "join" && S.code.length === 4) net.peek(S.code); draw(); });
     net.on("close", function () { S.open = false; if (S.view === "lobby" || S.view === "rules" || S.view === "game") { S.waking = true; draw(); } });
     net.on("error", function (m) { S.err = m.msg; S.busy = false; draw(); });
     net.on("event", function (e) { if (e.kind === "hostChanged" && S.room) { S.room.seats.forEach(function (x, i) { x.host = i === e.seat; }); if (e.seat === S.you) flash("👑 You are now the host"); draw(); } });
@@ -7848,6 +7908,7 @@ var Online11 = (function () {
       draw();
     });
     net.on("peek", function (m) { S.peek = m; draw(); });
+    if (window.Resume114) Resume114.watch(net);
     net.on("state", function (m) { S.state = m; if (m.you !== undefined) S.you = m.you; if (S.view !== "off") { S.view = "off"; draw(); Online11.start(net, { code: m.code, theme: S.room ? S.room.theme : null }, m); } });
     net.on("closed", function (m) { S.room = null; S.view = "home"; S.err = m.msg; draw(); });
     net.on("left", function () { S.room = null; S.view = "home"; draw(); });
@@ -7868,7 +7929,18 @@ var Online11 = (function () {
       '<button class="big10 pri" data-a="local">📱 Pass &amp; play<small>One phone, take turns</small></button>' +
       '<button class="big10" data-a="goCreate">🌐 Play online: create room<small>You host; friends join with a code</small></button>' +
       '<button class="big10" data-a="goJoin">🔑 Play online: join room<small>Enter the 4-letter code</small></button>' +
-      (me && me.code ? '<button class="lnk10" data-a="rejoin">↩️ Rejoin room ' + esc(me.code) + "</button>" : "");
+      (me && me.code ? '<button class="lnk10" data-a="rejoin">↩️ Rejoin room ' + esc(me.code) + "</button>" : "") +
+      srvLine() + (savedList().length ? '<button class="lnk10" data-a="saved">💾 Saved online games (' + savedList().length + ")</button>" : "");
+  }
+  function savedList() { var g = Net9.games ? Net9.games() : {}; return Object.keys(g).map(function (k) { return Object.assign({ code: k }, g[k]); }).sort(function (a, b) { return b.savedAt - a.savedAt; }); }
+  function vSaved() {
+    var L = savedList(), fmt = function (t) { var d = new Date(t); return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); };
+    return '<div class="sv114"><h2>💾 Saved online games</h2>' + (L.length ? L.map(function (g) {
+      return '<div class="sg114"><div class="i114"><b>Room ' + esc(g.code) + "</b> · " + esc(fmt(g.savedAt)) + " · Turn " + (g.turn || 0) + (g.over ? " · finished" : "") +
+        '<div class="pl114">' + (g.players || []).map(function (p, i) { return esc(p.token + " " + p.name) + (i === g.seat ? " (you)" : ""); }).join(", ") + "</div></div>" +
+        '<button data-a="resume" data-v="' + esc(g.code) + '">▶ Resume</button><button class="del114" data-a="delsaved" data-v="' + esc(g.code) + '" aria-label="Delete">🗑</button></div>';
+    }).join("") : "<p>No saved games yet. Online games save themselves here as you play.</p>") +
+      '<p class="hint10">Resume picks up exactly where the game was, even days later or after the server restarted.</p><button class="lnk10" data-a="home">← Back</button></div>';
   }
   function vForm(join) {
     var taken = join && S.peek && !S.peek.missing ? S.peek.seats.map(function (x) { return x.token; }) : [];
@@ -7879,8 +7951,8 @@ var Online11 = (function () {
       '<label class="f10">Your name<input id="name10" maxlength="16" value="' + esc(prof.name) + '" placeholder="Name"></label>' +
       '<div class="f10">Pick your token</div>' + tokenPicker(taken) +
       (!join && typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? '<p class="ok10">Your edited board &amp; cards will be used for this game.</p>' : "") +
-      waking() + (S.err ? '<p class="err10">' + esc(S.err) + "</p>" : "") +
-      '<button class="big10 pri" data-a="' + (join ? "join" : "create") + '"' + (ok && !S.busy ? "" : " disabled") + ">" + (S.busy ? '<span class="spin10"></span>' : "") + (join ? "Join room" : "Create room") + "</button>";
+      waking() + (join ? srvLine() : "") + (S.err ? '<p class="err10">' + esc(S.err) + "</p>" : "") +
+      '<button class="big10 pri" data-a="' + (join ? "join" : "create") + '"' + (ok && !S.busy ? "" : " disabled") + ">" + (S.busy ? '<span class="spin10"></span>' : "") + (join ? "Join room" : "Create room") + "</button>" + (join && S.code.length === 4 ? '<button class="lnk10" data-a="watch">👀 Just watch (no seat)</button>' : "");
   }
   function summary(s) {
     var h = s.houseRules, d = s.disconnect, pk = PARK.filter(function (p) { return p[0] === h.parking.mode; })[0][1] + (h.parking.mode === "fixed" ? " $" + h.parking.amount : "");
@@ -7941,7 +8013,7 @@ var Online11 = (function () {
     if (S.view === "off") { el.style.display = "none"; document.documentElement.classList.remove("ol10-on"); return; }
     el.style.display = ""; document.documentElement.classList.add("ol10-on");
     var f = document.activeElement, fid = f && f.id, pos = f && f.selectionStart;
-    el.innerHTML = '<div class="in10 v-' + S.view + '">' + ({ home: vHome, create: function () { return vForm(false); }, join: function () { return vForm(true); }, lobby: vLobby, rules: vRules, game: vGame }[S.view])() + "</div>" + (S.toast ? '<div class="toast10">' + esc(S.toast) + "</div>" : "");
+    el.innerHTML = '<div class="in10 v-' + S.view + '">' + ({ saved: vSaved, home: vHome, create: function () { return vForm(false); }, join: function () { return vForm(true); }, lobby: vLobby, rules: vRules, game: vGame }[S.view])() + "</div>" + (S.toast ? '<div class="toast10">' + esc(S.toast) + "</div>" : "");
     if (fid) { var n = document.getElementById(fid); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
   }
 
@@ -7956,7 +8028,7 @@ var Online11 = (function () {
   }
   function sendSettings(s) { S.room.settings = s; S.room.seats.forEach(function (x) { x.agreed = false; }); net.setSettings(s); draw(); }
   function share() {
-    var url = "https://timf76-eng.github.io/travel-monopoly/?room=" + S.room.code, text = "Join my Travel Monopoly game! Room " + S.room.code;
+    var url = Share114.url(S.room.code), text = "Join my Travel Monopoly game! Room " + S.room.code;
     if (navigator.share) navigator.share({ title: "Tim's Travel Monopoly", text: text, url: url }).catch(function () {});
     else if (navigator.clipboard) navigator.clipboard.writeText(text + ": " + url).then(function () { flash("Link copied"); }, function () { flash(url); });
     else flash(url);
@@ -7981,6 +8053,10 @@ var Online11 = (function () {
     else if (a === "tok") prof.token = b.dataset.v, ls(ME_KEY, prof);
     else if (a === "create") { S.busy = true; connect().createRoom({ name: cleanName(prof.name), token: prof.token, theme: typeof ThemeKit !== "undefined" && ThemeKit.isCustom() ? ThemeKit.current() : null, settings: ls(PRESET_KEY + ".last") || null }); }
     else if (a === "join") { S.busy = true; connect().joinRoom(S.code, cleanName(prof.name), prof.token); }
+    else if (a === "saved") S.view = "saved";
+    else if (a === "watch") { S.view = "lobby"; window.TM_VIEWER = true; connect().watch(S.code); }
+    else if (a === "delsaved") { if (confirm("Delete the saved game for room " + b.dataset.v + "?")) Net9.deleteGame(b.dataset.v); if (!savedList().length) S.view = "home"; }
+    else if (a === "resume") { var g = Net9.games()[b.dataset.v]; if (g) { S.view = "lobby"; S.code = b.dataset.v; var n = connect(); Resume114.auto(b.dataset.v); n.rejoin(b.dataset.v, g.rt); } }
     else if (a === "rejoin") { var me = ls(Net9.KEY); S.view = "lobby"; connect().rejoin(me.code, me.rt); }
     else if (a === "leave") { if (confirm(amHost() ? "Close this room for everyone?" : "Leave this room?")) net.leave(); return; }
     else if (a === "share") share();
@@ -7995,7 +8071,7 @@ var Online11 = (function () {
   });
   var saved = ls(Net9.KEY);
   if (S.view === "join" && saved && saved.code === S.code && saved.rt) { S.view = "lobby"; connect().rejoin(saved.code, saved.rt); } // reload / reopened link: take my seat back
-  else if (S.view === "join") connect();
+  else if (S.view === "join") { S.autoJoin = !!(prof.name && prof.name.trim() && prof.token); connect(); } // shared link ?room=CODE: join straight away if we know who you are
   draw();
   window.Lobby10 = { state: S, show: function () { S.view = "home"; draw(); } };
 })();
@@ -8203,7 +8279,7 @@ var Chat112 = (function () { // v11.2 online chat. All message text goes in via 
     var hd = el("div", "hd"); hd.appendChild(el("span", "", "💬 Table chat")); var x = el("button", "", "✕"); x.type = "button"; x.dataset.c112 = "close"; hd.appendChild(x); bx.appendChild(hd);
     bx.appendChild(el("div", "ls")); var qr = el("div", "qr"); QUICK.forEach(function (q) { var b = el("button", "", q); b.type = "button"; b.dataset.q = q; qr.appendChild(b); }); bx.appendChild(qr);
     var f = el("form"); var inp = el("input"); inp.maxLength = 200; inp.placeholder = "Message (200 max)"; inp.autocomplete = "off"; f.appendChild(inp); var sb = el("button", "", "Send"); sb.type = "submit"; f.appendChild(sb); bx.appendChild(f);
-    bx.appendChild(el("div", "rt"));
+    bx.appendChild(el("div", "rt")); if (window.TM_VIEWER || (window.Online11 && Online11.last() && Online11.last().you < 0)) { qr.style.display = "none"; f.style.display = "none"; bx.appendChild(el("div", "rt", "👀 You're watching: chat is read-only.")); }
     sheet.addEventListener("click", function (e) { e.stopPropagation(); if (e.target === sheet || e.target.dataset.c112 === "close") close(); else if (e.target.dataset.q) send(e.target.dataset.q); });
     f.addEventListener("submit", function (e) { e.preventDefault(); if (send(inp.value)) inp.value = ""; });
     document.body.appendChild(sheet); draw(); }
@@ -8285,6 +8361,105 @@ var Rules113 = (function () { // v11.3 mid-game rule-change votes (server decide
       else if (e.kind === "proposal" && sheet) close(); });
     n.on("error", function (m) { if (m.prop) { if (sheet) sheet.querySelector(".er").textContent = m.msg; else toast(m.msg); } }); }
   return { start: start, mount: mount, open: open, close: close };
+})();
+</script><script>
+var Resume114 = (function () { // v11.4: the server lost the room (restart / sleep). Offer to resume from this phone's saved copy.
+  var net = null, box = null, code = "", pollT = null, autoCode = "", HOST_WAIT = window.TM_RESUME_WAIT || 15000;
+  function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+  function game() { return code && Net9.games()[code]; }
+  function hide() { if (box) box.remove(); box = null; clearInterval(pollT); pollT = null; }
+  function show() {
+    var g = game(); if (!g) return; if (autoCode === code) { autoCode = ""; return restore(); }
+    if (box) return; var me = g.players[g.seat], host = (g.snap.seatCore[g.seat] || {}).host, hostName = (g.snap.seatCore.filter(function (x) { return x.host; })[0] || {}).name;
+    box = el("div"); box.id = "rs114"; var bx = el("div", "bx"); box.appendChild(bx);
+    bx.appendChild(el("h3", "", "🔌 Game server restarted. Resume?"));
+    bx.appendChild(el("div", "inf", "Room " + code + " · Turn " + (g.turn || 0) + " · " + g.players.map(function (p) { return p.token + " " + p.name; }).join(", ")));
+    bx.appendChild(el("div", "inf", "The game was saved on this phone " + ago(g.savedAt) + ". Everyone keeps their seat; anyone not back yet is handled by the room's disconnect rule."));
+    var st = el("div", "st", host ? "" : "Waiting for " + (hostName || "the host") + " to resume…"); bx.appendChild(st);
+    var go = el("button", "go", "▶ Resume game"); go.type = "button"; go.disabled = !host; bx.appendChild(go);
+    var no = el("button", "no", "Not now"); no.type = "button"; bx.appendChild(no);
+    go.onclick = function () { go.disabled = true; st.textContent = "Resuming…"; restore(); };
+    no.onclick = function () { hide(); if (window.Lobby10) Lobby10.show(); };
+    if (!host) setTimeout(function () { if (box) { go.disabled = false; st.textContent = (hostName || "The host") + " isn't back yet. You can resume instead."; } }, HOST_WAIT);
+    document.body.appendChild(box);
+    clearInterval(pollT); pollT = setInterval(function () { if (net && net.isOpen()) net.rejoin(code, g.rt); }, 3000); // someone else may resume first: then we just take our seat
+  }
+  function ago(t) { var m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 2880 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago"; }
+  function restore() { var g = game(); if (g && net) net.restore(g); }
+  function watch(n) { if (net === n) return; net = n;
+    n.on("error", function (m) { if (m.missing && m.code) { code = m.code; show(); } else if (m.restore && box) box.querySelector(".st").textContent = m.msg; });
+    n.on("joined", function () { hide(); });
+  }
+  return { watch: watch, auto: function (c) { autoCode = c; }, isOpen: function () { return !!box; } };
+})();
+</script><script>
+var Remind114 = (function () { // v11.4 turn reminders (online): vibrate, optional sound, title flash, system notification when hidden
+  var KEY = "timTravelMonopoly.remind", cfg = (function () { try { return JSON.parse(localStorage.getItem(KEY)) || { on: true, sound: false }; } catch (e) { return { on: true, sound: false }; } })();
+  var mine = null, title0 = document.title, flashT = null, log = [];
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {} }
+  function beep() { try { var A = window.AudioContext || window.webkitAudioContext, c = new A(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(c.destination); o.start(); setTimeout(function () { o.frequency.value = 1175; }, 140); setTimeout(function () { o.stop(); c.close(); }, 320); } catch (e) {} }
+  function flash() { clearInterval(flashT); var n = 0; flashT = setInterval(function () { document.title = (n++ % 2) ? title0 : "🎲 Your turn!"; if (n > 40 || (n > 8 && !document.hidden)) { clearInterval(flashT); document.title = title0; } }, 700); }
+  function remind(st) { log.push(Date.now()); if (!cfg.on) return;
+    try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+    if (cfg.sound) beep(); flash();
+    try { if (document.hidden && window.Notification && Notification.permission === "granted") new Notification("Travel Monopoly", { body: "🎲 It's your turn!", tag: "tm-turn" }); } catch (e) {} }
+  function onState(m) { var me = m.you, a = m.actor; if (me === undefined || me < 0 || !m.state || m.state.phase === "gameover") { mine = null; return; }
+    var now = a === me; if (now && mine === false) remind(m.state); mine = now; }
+  function menu() { var g = document.querySelector('#phoneMenu .pmsec[data-sec="game"]'); if (!g) return; var b = g.querySelector("[data-rm114]");
+    if (!b) { b = document.createElement("span"); b.className = "rm114"; b.dataset.rm114 = "1"; g.appendChild(b); }
+    var np = window.Notification ? Notification.permission : "unsupported";
+    b.innerHTML = '<button data-rm="on" title="Turn reminders">🔔 Reminders: ' + (cfg.on ? "On" : "Off") + '</button><button data-rm="sound" title="Reminder sound">' + (cfg.sound ? "🔊 Sound: On" : "🔈 Sound: Off") + "</button>" + (np === "default" ? '<button data-rm="notify" title="Allow notifications">📣 Notify me</button>' : ""); Fit114.menu(); }
+  document.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("[data-rm]"); if (!b) return; e.stopPropagation(); e.preventDefault(); var k = b.dataset.rm;
+    if (k === "on") cfg.on = !cfg.on; else if (k === "sound") { cfg.sound = !cfg.sound; if (cfg.sound) beep(); } else if (k === "notify" && window.Notification) { Notification.requestPermission().then(menu, menu); return; } // permission asked only on this tap
+    save(); menu(); }, true);
+  function start(net) { net.on("state", onState); menu(); }
+  return { start: start, cfg: function () { return cfg; }, log: function () { return log; }, menu: menu };
+})();
+var Share114 = (function () { // v11.4 share link (room bar + lobby): navigator.share, else copy
+  var btn = null, codeFn = null;
+  function url(code) { var base = /^https?:/.test(location.protocol) ? location.origin + location.pathname : "https://timf76-eng.github.io/travel-monopoly/", q = new URLSearchParams(location.search).get("server");
+    return base + "?room=" + code + (q && /^https?:/.test(location.protocol) ? "&server=" + encodeURIComponent(q) : ""); }
+  function share(code) { var u = url(code), text = "Join my Travel Monopoly game! Room " + code; window.__lastShare = u;
+    if (navigator.share) return navigator.share({ title: "Tim's Travel Monopoly", text: text, url: u }).catch(function () {});
+    var done = function () { var t = document.getElementById("toast"); if (t) { t.textContent = "🔗 Link copied"; t.style.display = "block"; t.style.opacity = 1; setTimeout(function () { t.style.opacity = 0; }, 2000); } };
+    if (navigator.clipboard) navigator.clipboard.writeText(text + ": " + u).then(done, done); else done(); }
+  function mount(bar) { if (!codeFn) return; if (!btn) { btn = document.createElement("button"); btn.id = "sh114b"; btn.type = "button"; btn.textContent = "🔗"; btn.title = "Share room link"; btn.setAttribute("aria-label", "Share room link"); btn.addEventListener("click", function (e) { e.stopPropagation(); share(codeFn()); }); }
+    if (btn.parentNode !== bar) bar.insertBefore(btn, document.getElementById("rule113b") || document.getElementById("chat112b")); }
+  return { url: url, share: share, mount: mount, start: function (f) { codeFn = f; } };
+})();
+var Stats114 = (function () { // v11.4 end-of-game stats sheet
+  function money(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+  function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+  function open() { var st = TravelMonopolyUI.getState(); if (!st) return; close(); var S = st.stats || {}, D = window.BOARD_DATA;
+    var ov = el("div"); ov.id = "st114"; var bx = el("div", "bx"); ov.appendChild(bx); var h = el("h3", "", "📊 Game stats"); var x = el("button", "", "✕"); x.type = "button"; x.onclick = close; h.appendChild(x); bx.appendChild(h);
+    var tb = el("table"), hr = el("tr"); ["Player", "Rent in", "Rent out", "Jail", "GO", "Bought", "Biggest"].forEach(function (t) { hr.appendChild(el("th", "", t)); }); tb.appendChild(hr);
+    var best = null, big = null;
+    st.players.forEach(function (p, i) { var z = S[i] || { rentIn: 0, rentOut: 0, jail: 0, go: 0, bought: 0, biggest: 0, propRent: {} }, tr = el("tr");
+      [p.token + " " + p.name, money(z.rentIn), money(z.rentOut), z.jail, z.go, z.bought, money(z.biggest)].forEach(function (v) { tr.appendChild(el("td", "", String(v))); }); tb.appendChild(tr);
+      Object.keys(z.propRent || {}).forEach(function (q) { if (!best || z.propRent[q] > best.n) best = { n: z.propRent[q], pos: +q, p: p }; });
+      if (z.biggest && (!big || z.biggest > big.n)) big = { n: z.biggest, why: z.biggestWhy, p: p }; });
+    bx.appendChild(tb); var hl = el("div", "hl");
+    hl.appendChild(el("div", "", "🏆 Best property: " + (best ? (D && D.spaces[best.pos] ? D.spaces[best.pos].name : "#" + best.pos) + " earned " + money(best.n) + " rent for " + best.p.name : "no rent was paid")));
+    hl.appendChild(el("div", "", "💸 Biggest payment: " + (big ? money(big.n) + " by " + big.p.name + (big.why ? " (" + big.why + ")" : "") : "none")));
+    bx.appendChild(hl); var ok = el("button", "ok", "Close"); ok.type = "button"; ok.onclick = close; bx.appendChild(ok); document.body.appendChild(ov); }
+  function close() { var o = document.getElementById("st114"); if (o) o.remove(); }
+  document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-stats114]")) { e.stopPropagation(); open(); } }, true);
+  return { open: open, close: close };
+})();
+var Fit114 = (function () { // v11.4: the Menu sheet never scrolls; if its content is too tall, tighten it step by step (no smaller text)
+  function menu() { var m = document.getElementById("phoneMenu"); if (!m || !m.offsetParent) return; var body = m.closest(".p9body") || m.parentNode;
+    var over = function () { var b = body.getBoundingClientRect().bottom; return [].some.call(m.querySelectorAll("button"), function (x) { return x.offsetParent && x.getBoundingClientRect().bottom > b + 1; }); };
+    m.classList.remove("c1", "c2", "c3"); ["c1", "c2", "c3"].forEach(function (c) { if (over()) m.classList.add(c); }); }
+  document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-p9open=menu]")) [60, 250].forEach(function (t) { setTimeout(menu, t); }); }, true);
+  addEventListener("resize", function () { setTimeout(menu, 50); });
+  return { menu: menu };
+})();
+var Undo114 = (function () { // v11.4 local undo button in the Menu (hidden online)
+  function refresh() { var g = document.querySelector('#phoneMenu .pmsec[data-sec="game"]'); if (!g || !window.TravelMonopolyUI) return; var b = g.querySelector("#ud114m");
+    if (!b) { b = document.createElement("button"); b.id = "ud114m"; b.type = "button"; b.addEventListener("click", function (e) { e.stopPropagation(); TravelMonopolyUI.undo(); }); g.appendChild(b); }
+    var c = TravelMonopolyUI.canUndo(), online = window.Online11 && Online11.active(); b.style.display = online ? "none" : ""; b.disabled = !c; b.textContent = c ? "↶ Undo " + c : "↶ Undo (nothing to undo)"; Fit114.menu(); }
+  document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-p9open=menu]")) setTimeout(refresh, 30); }, true);
+  setTimeout(refresh, 0); return { refresh: refresh };
 })();
 </script></body>
 </html>

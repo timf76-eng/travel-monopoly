@@ -1,7 +1,7 @@
 /* Optional offline cache for Tim's Travel Monopoly v7. Only used when the game is served over https
    (put this file next to the HTML). The single HTML file works fine without it.
    Strategy: network first (so updates arrive), fall back to the cached copy when offline. */
-var CACHE = "travel-monopoly-v11.3";
+var CACHE = "travel-monopoly-v11.4";
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll([self.registration.scope]).catch(function () {}); }).then(function () { return self.skipWaiting(); }));
 });
