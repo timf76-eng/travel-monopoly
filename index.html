@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="tm-version" content="v11.4">
+<meta name="tm-version" content="v11.4.1">
 <meta name="theme-color" content="#14315c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -760,6 +760,9 @@ html.phone body.p9 .fxhint{font-size:16px}
 #st114 table{border-collapse:collapse;width:100%;font-size:12.5px;table-layout:fixed}#st114 th{font-size:11px;font-weight:600;opacity:.8;padding:2px}#st114 td{padding:3px 2px;text-align:center;border-top:1px solid #ffffff22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #st114 td:first-child,#st114 th:first-child{text-align:left;width:28%}#st114 .hl{font-size:13px;background:#ffffff14;border-radius:9px;padding:6px 8px}#st114 .hl div{margin:1px 0}
 #st114 .ok{border:0;border-radius:10px;padding:8px;font-weight:700;background:#ffc93c;color:#14315c}
+
+#phoneTabs .t3d{display:none}html.phone body:not(.b3d) #phoneTabs .t3d{display:inline-flex;align-items:center;justify-content:center}
+#phoneMenu #view3dBtn{flex:1 1 100%}
 </style>
 </head>
 <body>
@@ -5527,7 +5530,8 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   function typeLabel(t) { return (D.meta.typeLabels && D.meta.typeLabels[t]) || t; }
   function spaceIcon(s) { return s.icon || (s.type === "property" ? D.groups[s.group].icon : "📍"); }
   function state() { var u = UI(); return u ? u.getState() : null; }
-  function pref3d() { try { return localStorage.getItem(PREF_KEY) !== "0"; } catch (e) { return true; } }
+  function pref3d() { try { var v = localStorage.getItem(PREF_KEY); // v11.4.1: an old "0" written by the automatic fallback (not by the user) is reset once
+      if (v === "0" && !localStorage.getItem(PREF_KEY + ".user")) { localStorage.removeItem(PREF_KEY); return true; } return v !== "0"; } catch (e) { return true; } }
   function setPref(on) { try { localStorage.setItem(PREF_KEY, on ? "1" : "0"); } catch (e) {} }
 
   /* ---------- header toggle (always present so Tim can switch back and forth) ---------- */
@@ -6895,18 +6899,18 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
 
   /* ---------- on / off ---------- */
   var active = false, dirty = true, last = performance.now();
-  function setActive(on) {
-    active = on; setPref(on); fpsSince = performance.now(); fpsT = fpsN = fpsPrev = 0;
+  function setActive(on, auto) { // auto: switched by the game (slow fps / lost WebGL), not by the user: don't remember it
+    active = on; if (!auto) setPref(on); fpsSince = performance.now(); fpsT = fpsN = fpsPrev = 0;
     document.body.classList.toggle("b3d", on);
     if (window.SFX) SFX.external3D = on; // the 3D board plays dice impacts and house thunks in time with its animations
-    hdrBtn.textContent = on ? "🧊 3D board: On" : "🧊 3D board: Off";
+    hdrBtn.textContent = on ? "🧊 2D / 3D board: 3D" : "🗺️ 2D / 3D board: 2D";
     placePanel();
     if (on) { resize(); needSync = true; dirty = true; }
     setHover(null);
     window.dispatchEvent(new Event("resize")); // 2D tokens re-layout
   }
-  hdrBtn.addEventListener("click", function () { setActive(!active); });
-  canvas.addEventListener("webglcontextlost", function (ev) { ev.preventDefault(); setActive(false); hdrBtn.textContent = "🧊 3D: unavailable"; hdrBtn.disabled = true; });
+  hdrBtn.addEventListener("click", function () { try { localStorage.setItem(PREF_KEY + ".user", "1"); } catch (e) {} setActive(!active); });
+  canvas.addEventListener("webglcontextlost", function (ev) { ev.preventDefault(); setActive(false, true); hdrBtn.textContent = "🧊 3D: unavailable (reload)"; hdrBtn.disabled = true; });
 
   var fpsPrev = 0, fpsT = 0, fpsN = 0, fpsSince = performance.now();
   function fpsGuard(now, anim) {
@@ -6917,7 +6921,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
     if (fpsT >= 3500) { var fps = fpsN * 1000 / fpsT; fpsT = 0; fpsN = 0; if (fps < 20) slowFallback(fps); }
   }
   function slowFallback(fps) {
-    setActive(false);
+    setActive(false, true);
     var n = document.createElement("div"); n.className = "slow3d-note"; n.setAttribute("role", "status");
     n.innerHTML = "<span>3D was running slowly here (about " + Math.round(fps) + " fps), so the board switched to 2D. You can turn 3D back on from the menu (🧊 3D board).</span><button>OK</button>";
     document.body.appendChild(n); var bye = function () { if (n.parentNode) n.parentNode.removeChild(n); };
@@ -7357,7 +7361,7 @@ if (typeof ThemeKit !== "undefined") ThemeKit.remapPhotos(PHOTO_MANIFEST); // v9
   /* tab row: Players · Log · Menu · 🎯 · 🗺 (replaces v7's Players/Log/Menu/⟲/⬇ and v8's floating camera pills) */
   var tabs = $("#phoneTabs"), cams = $("#p8cams"); if (cams) cams.parentNode.removeChild(cams);
   tabs.innerHTML = '<button data-p9open="players">👥 Players</button><button data-p9open="log">📜 Log</button><button data-p9open="menu">☰ Menu</button>' +
-    '<button class="cam" data-p9cam="me" aria-label="Focus my token" title="Focus my token">🎯</button><button class="cam" data-p9cam="all" aria-label="Whole board" title="Whole board">🗺</button>' +
+    '<button class="cam" data-p9cam="me" aria-label="Focus my token" title="Focus my token">🎯</button><button class="cam" data-p9cam="all" aria-label="Whole board" title="Whole board">🗺</button><button class="t3d" data-t3d="1" aria-label="Turn the 3D board on" title="Turn the 3D board on">🧊 3D</button>' +
     '<button data-pcam="toggle" hidden aria-hidden="true"></button>'; // v7's camera-icon code still looks for this one
 
   /* full-screen sheet */
@@ -8461,5 +8465,7 @@ var Undo114 = (function () { // v11.4 local undo button in the Menu (hidden onli
   document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-p9open=menu]")) setTimeout(refresh, 30); }, true);
   setTimeout(refresh, 0); return { refresh: refresh };
 })();
+</script><script>
+document.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("[data-t3d]"); if (!b) return; e.stopPropagation(); var h = document.getElementById("view3dBtn"); if (h && !h.disabled) h.click(); }, true); // v11.4.1
 </script></body>
 </html>
